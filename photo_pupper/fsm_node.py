@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # *************************************************
 # * Filename: fsm_node.py
 # * Student: Kane Li, kal036@ucsd.edu

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import subprocess
 import rclpy
@@ -45,3 +46,17 @@ class PrinterNode(Node):
             self.get_logger().error(response.message)
             
         return response
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = PrinterNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
