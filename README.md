@@ -60,3 +60,21 @@ The `printer_node` exposes a custom ROS 2 service server to print images dynamic
   * **Response**:
     * `bool success` - Indicates if the command successfully queued the asset to the CUPS spooler.
     * `string message` - Spooler log message or details on processing failures.
+
+### Photo Processing Setup
+The `photo_processing_node` handles overlaying frames onto raw camera photographs.
+
+#### Process Photo Service (`/process_photo`)
+* **Service Name**: `/process_photo`
+* **Type**: `photo_pupper/srv/ProcessPhoto`
+* **Interface Specification**:
+  * **Request**:
+    * `string input_path` - The absolute path to the raw input photo on disk.
+    * `uint8 overlay_type` - Enum selector for overlay frame style: // TODO ADD MORE
+      * `OVERLAY_NONE = 0` - Copies raw photo directly with no border.
+      * `OVERLAY_FLOWERS = 1` - Overlays the custom transparent flower template (`OverlayTemplate.png`).
+    * `string output_path` - (Optional) Custom path to write the JPEG output (automatically generates a path in `/tmp` if left empty).
+  * **Response**:
+    * `bool success` - `true` if overlay compositing succeeded and saved.
+    * `string message` - Detailed execution trace, saved path, or warning/error logs.
+    * `string processed_path` - The absolute path to the generated output image.

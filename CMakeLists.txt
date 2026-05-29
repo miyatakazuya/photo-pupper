@@ -11,6 +11,7 @@ find_package(rosidl_default_generators REQUIRED)
 # Generate custom service interface
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/PrintImage.srv"
+  "srv/ProcessPhoto.srv"
 )
 
 install(DIRECTORY photo_pupper
@@ -28,7 +29,7 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY launch config
+install(DIRECTORY launch config resource
   DESTINATION share/${PROJECT_NAME}
 )
 
