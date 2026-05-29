@@ -9,18 +9,22 @@ from std_msgs.msg import String
 
 
 PLACEHOLDER_IMAGE = 'placeholder.jpg'
+ANIMATION_PERIOD = 0.4
 
-# Maps screen commands from the only the FSM to theimage files
 SCREEN_IMAGES = {
     'idle': PLACEHOLDER_IMAGE,
     'reveal': PLACEHOLDER_IMAGE,
     'welcome': PLACEHOLDER_IMAGE,
     'ready': PLACEHOLDER_IMAGE,
+    'ready_yes': 'Yes_Selection.jpg',
+    'ready_no': 'No_Selection.jpg',
     'mood_happy': PLACEHOLDER_IMAGE,
     'mood_silly': PLACEHOLDER_IMAGE,
     'mood_sad': PLACEHOLDER_IMAGE,
     'mood_serious': PLACEHOLDER_IMAGE,
     'mood_confirm': PLACEHOLDER_IMAGE,
+    'mood_confirm_yes': PLACEHOLDER_IMAGE,
+    'mood_confirm_change': PLACEHOLDER_IMAGE,
     'pose_happy_1': PLACEHOLDER_IMAGE,
     'pose_happy_2': PLACEHOLDER_IMAGE,
     'pose_happy_3': PLACEHOLDER_IMAGE,
@@ -55,6 +59,15 @@ SCREEN_IMAGES = {
     'error': PLACEHOLDER_IMAGE,
 }
 
+# Swap these placeholder frames for blink images later.
+SCREEN_ANIMATIONS = {
+    'welcome_talking': [
+        PLACEHOLDER_IMAGE,
+        PLACEHOLDER_IMAGE,
+        PLACEHOLDER_IMAGE,
+    ],
+}
+
 RESOURCE_DIR = Path(__file__).resolve().parents[1] / 'resource'
 
 
@@ -63,6 +76,9 @@ class ScreenSubscriber(Node):
     def __init__(self):
         super().__init__('screen_subscriber')
         self.display = Display()
+        self.animation_timer = None
+        self.animation_frames = []
+        self.animation_index = 0
         self.subscription = self.create_subscription(
             String,
             'screen_command',
@@ -75,11 +91,42 @@ class ScreenSubscriber(Node):
         self.show_screen(msg.data.strip())
 
     def show_screen(self, screen_name):
-        image_name = SCREEN_IMAGES.get(screen_name, SCREEN_IMAGES['error'])
-        image_path = RESOURCE_DIR / image_name
+        if screen_name in SCREEN_ANIMATIONS:
+            self.start_animation(screen_name)
+            return
 
-        self.display.show_image(str(image_path))
+        self.stop_animation()
+        image_name = SCREEN_IMAGES.get(screen_name, SCREEN_IMAGES['error'])
+        self.show_image(image_name)
         self.get_logger().info(f'Showing screen: {screen_name}')
+
+    def start_animation(self, screen_name):
+        self.stop_animation()
+        self.animation_frames = SCREEN_ANIMATIONS[screen_name]
+        self.animation_index = 0
+        self.show_next_animation_frame()
+        self.animation_timer = self.create_timer(
+            ANIMATION_PERIOD,
+            self.show_next_animation_frame
+        )
+        self.get_logger().info(f'Playing screen animation: {screen_name}')
+
+    def show_next_animation_frame(self):
+        image_name = self.animation_frames[self.animation_index]
+        self.show_image(image_name)
+        self.animation_index = (
+            self.animation_index + 1
+        ) % len(self.animation_frames)
+
+    def stop_animation(self):
+        if self.animation_timer is not None:
+            self.animation_timer.cancel()
+            self.destroy_timer(self.animation_timer)
+            self.animation_timer = None
+
+    def show_image(self, image_name):
+        image_path = RESOURCE_DIR / image_name
+        self.display.show_image(str(image_path))
 
 
 def main(args=None):
