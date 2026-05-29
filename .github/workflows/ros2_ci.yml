@@ -14,12 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Create ROS 2 Workspace
-        run: |
-          mkdir -p ros2_ws/src
-          # Copy the package source files to the workspace source directory
-          cp -r . ros2_ws/src/photo_pupper
+        with:
+          path: ros2_ws/src/photo_pupper
 
       - name: Install Dependencies
         run: |
