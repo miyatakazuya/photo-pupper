@@ -1,0 +1,5 @@
+string image_path       # Absolute path to the processed image file on disk
+string media_size       # Sizing layout string (e.g., "w50h60" or "w50h150")
+---
+bool success            # True if successfully queued to the printer queue
+string message          # Status details or debugging error logs
