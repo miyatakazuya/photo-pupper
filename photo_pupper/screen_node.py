@@ -12,19 +12,19 @@ PLACEHOLDER_IMAGE = 'placeholder.jpg'
 ANIMATION_PERIOD = 0.4
 
 SCREEN_IMAGES = {
-    'idle': PLACEHOLDER_IMAGE,
-    'reveal': PLACEHOLDER_IMAGE,
-    'welcome': PLACEHOLDER_IMAGE,
-    'ready': PLACEHOLDER_IMAGE,
+    'idle': 'Default_Camera.jpg',
+    'reveal': 'Happy_Camera.jpg',
+    'welcome': 'Default_Camera.jpg',
+    'ready': 'Default_Camera.jpg',
     'ready_yes': 'Yes_Selection.jpg',
     'ready_no': 'No_Selection.jpg',
-    'mood_happy': PLACEHOLDER_IMAGE,
-    'mood_silly': PLACEHOLDER_IMAGE,
-    'mood_sad': PLACEHOLDER_IMAGE,
-    'mood_serious': PLACEHOLDER_IMAGE,
+    'mood_happy': 'Happy_Selection.jpg',
+    'mood_silly': 'Silly_Selection.jpg',
+    'mood_sad': 'Sad_Selection.jpg',
+    'mood_serious': 'Serious_Selection.jpg',
     'mood_confirm': PLACEHOLDER_IMAGE,
-    'mood_confirm_yes': PLACEHOLDER_IMAGE,
-    'mood_confirm_change': PLACEHOLDER_IMAGE,
+    'mood_confirm_yes': 'Mood_Yes_Selection.jpg',
+    'mood_confirm_change': 'Mood_Change_Selection.jpg',
     'pose_happy_1': PLACEHOLDER_IMAGE,
     'pose_happy_2': PLACEHOLDER_IMAGE,
     'pose_happy_3': PLACEHOLDER_IMAGE,
@@ -62,9 +62,9 @@ SCREEN_IMAGES = {
 # Swap these placeholder frames for blink images later.
 SCREEN_ANIMATIONS = {
     'welcome_talking': [
-        PLACEHOLDER_IMAGE,
-        PLACEHOLDER_IMAGE,
-        PLACEHOLDER_IMAGE,
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
     ],
 }
 
