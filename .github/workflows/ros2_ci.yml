@@ -1,0 +1,35 @@
+name: ROS 2 CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: osrf/ros:humble-desktop
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create ROS 2 Workspace
+        run: |
+          mkdir -p ros2_ws/src
+          # Copy the package source files to the workspace source directory
+          cp -r . ros2_ws/src/photo_pupper
+
+      - name: Install Dependencies
+        run: |
+          apt-get update
+          rosdep update
+          rosdep install --from-paths ros2_ws/src --ignore-src -r -y
+
+      - name: Build Package
+        run: |
+          # Source ROS 2 Humble
+          . /opt/ros/humble/setup.sh
+          cd ros2_ws
+          colcon build --packages-select photo_pupper
