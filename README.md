@@ -1,4 +1,6 @@
 # Pupper Delivery Bot Repo
+[![ROS 2 CI](https://github.com/miyatakazuya/photo-pupper/actions/workflows/ros2_ci.yml/badge.svg)](https://github.com/miyatakazuya/photo-pupper/actions/workflows/ros2_ci.yml)
+
 Contributors: Kazuya Miyata, Kane Li, Austin Choi
 
 
@@ -46,3 +48,15 @@ photobooth_nodes:
 We used a Phomemo T02 Printer to print, using this [CUPS driver](https://github.com/vivier/phomemo-tools).
 
 To setup, follow the instructions in the above driver repository to download the CUPS driver for the T02. Then the `printer_node.py` should work as intended.
+
+#### Print Image Service (`/print_image`)
+The `printer_node` exposes a custom ROS 2 service server to print images dynamically:
+* **Service Name**: `/print_image`
+* **Type**: `photo_pupper/srv/PrintImage`
+* **Interface Specification**:
+  * **Request**:
+    * `string image_path` - The absolute target path to the image on disk.
+    * `string media_size` - Size configuration layout (e.g., `"w50h60"` or `"w50h150"`), falling back to the default node parameter if empty.
+  * **Response**:
+    * `bool success` - Indicates if the command successfully queued the asset to the CUPS spooler.
+    * `string message` - Spooler log message or details on processing failures.
