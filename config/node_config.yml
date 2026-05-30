@@ -1,0 +1,9 @@
+# Toggle Nodes (1 is activated)
+photobooth_nodes:
+  fsm_node: 1
+  movement_node: 1
+  people_detection_node: 1
+  photo_processing_node: 1
+  printer_node: 1
+  screen_node: 1
+  touch_node: 1
