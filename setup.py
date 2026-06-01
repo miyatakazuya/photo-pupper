@@ -37,6 +37,7 @@ setup(
             'printer_node = photo_pupper.printer_node:main',
             'screen_node = photo_pupper.screen_node:main',
             'touch_node = photo_pupper.touch_node:main',
+            'overlay_node = photo_pupper.overlay_node:main'
         ],
     },
 )
