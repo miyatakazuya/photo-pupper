@@ -44,24 +44,24 @@ OVERLAYS_BY_MOOD = {
 }
 POSE_LINES = {
     'happy': [
-        'Give me a big smile and thumbs up.',
-        'Try making heart hands.',
         'Try a double bicep flex.',
+        'Try making heart hands.',
+        'Give me a big smile and thumbs up.',
     ],
     'silly': [
-        'Give me a peace sign!',
+        'Do the dab.'
         'Try funny hand motion on your head',
-        'Do the dab.',
+        'Give me a peace sign!',
     ],
     'sad': [
         'Try a fake crying pose.',
-        'Look down dramatically.',
         'Curl up in your chair and hug your legs like you are really sad.',
+        'Look down dramatically.',
     ],
     'serious': [
         'Cross your arms like a boss.',
-        'Try a thinker pose.',
         'Stand strong and pose like superman!',
+        'Try a thinker pose.',
     ],
 }
 MOOD_THINKING_LINES = {
