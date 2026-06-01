@@ -56,7 +56,7 @@ POSE_LINES = {
     'sad': [
         'Try a fake crying pose.',
         'Look down dramatically.',
-        'Curl up in your chair and hug your legs like you're really sad.',
+        'Curl up in your chair and hug your legs like you are really sad.',
     ],
     'serious': [
         'Cross your arms like a boss.',
