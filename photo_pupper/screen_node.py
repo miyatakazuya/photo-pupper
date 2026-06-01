@@ -25,6 +25,20 @@ SCREEN_IMAGES = {
     'mood_confirm': PLACEHOLDER_IMAGE,
     'mood_confirm_yes': 'Mood_Yes_Selection.jpg',
     'mood_confirm_change': 'Mood_Change_Selection.jpg',
+    'camera_ready': 'Default_Camera.jpg',
+    'countdown_intro': 'Default_Camera.jpg',
+    'photo_capture': PLACEHOLDER_IMAGE,
+    'photo_reaction': 'Happy_Camera.jpg',
+    'photo_keep': PLACEHOLDER_IMAGE,
+    'photo_retake': PLACEHOLDER_IMAGE,
+    'overlay_confirm_yes': PLACEHOLDER_IMAGE,
+    'overlay_confirm_change': PLACEHOLDER_IMAGE,
+    'apply_overlay': PLACEHOLDER_IMAGE,
+    'final_preview': PLACEHOLDER_IMAGE,
+    'final_keep': PLACEHOLDER_IMAGE,
+    'final_retake': PLACEHOLDER_IMAGE,
+    'printing_talking': 'Default_Camera.jpg',
+    'goodbye_talking': 'Default_Camera.jpg',
     'pose_happy_1': PLACEHOLDER_IMAGE,
     'pose_happy_2': PLACEHOLDER_IMAGE,
     'pose_happy_3': PLACEHOLDER_IMAGE,
@@ -62,6 +76,36 @@ SCREEN_IMAGES = {
 # Swap these placeholder frames for blink images later.
 SCREEN_ANIMATIONS = {
     'welcome_talking': [
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
+    ],
+    'ready_talking': [
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
+    ],
+    'ready_confirmed_talking': [
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
+    ],
+    'pose_thinking': [
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
+    ],
+    'overlay_intro_talking': [
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
+    ],
+    'printing_talking': [
+        'Default_Camera.jpg',
+        'Blink_Camera.jpg',
+        'Default_Camera.jpg',
+    ],
+    'goodbye_talking': [
         'Default_Camera.jpg',
         'Blink_Camera.jpg',
         'Default_Camera.jpg',
