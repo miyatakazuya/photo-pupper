@@ -22,7 +22,7 @@ POSE_THINKING_SECONDS = 2.0
 POSE_SUGGESTION_SECONDS = 5.0
 COUNTDOWN_INTRO_SECONDS = 2.0
 COUNTDOWN_SECONDS = 1.0
-PHOTO_CAPTURE_SECONDS = 0.5
+PHOTO_CAPTURE_SECONDS = 1.5
 PHOTO_REACTION_SECONDS = 3.0
 PHOTO_REVIEW_PROMPT_SECONDS = 3.0
 OVERLAY_INTRO_SECONDS = 6.0
@@ -49,19 +49,19 @@ POSE_LINES = {
         'Try a double bicep flex.',
     ],
     'silly': [
-        'Give me a peace sign with a funny face.',
-        'Try a big exaggerated wave.',
-        'Do a goofy leaning pose.',
+        'Give me a peace sign!',
+        'Try funny hand motion on your head',
+        'Do the dab.',
     ],
     'sad': [
         'Try a fake crying pose.',
         'Look down dramatically.',
-        'Put your hands on your cheeks with a dramatic pout.',
+        'Curl up in your chair and hug your legs like you're really sad.',
     ],
     'serious': [
         'Cross your arms like a boss.',
         'Try a thinker pose.',
-        'Stand strong and look straight ahead.',
+        'Stand strong and pose like superman!',
     ],
 }
 MOOD_THINKING_LINES = {
