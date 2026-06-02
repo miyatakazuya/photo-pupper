@@ -24,7 +24,7 @@ class SpeakerNode(Node):
         self.get_logger().info("Speaker Node loaded")
 
     def play_sound_callback(self, request, response):
-        target_path = request.image_path
+        target_path = request.sound_path
 
         if not os.path.exists(target_path):
             response.success = False
@@ -33,16 +33,21 @@ class SpeakerNode(Node):
             return response
 
         try:
-            print(f"Loading sound file: {target_path}")
+            self.get_logger().info(f"Loading sound file: {target_path}")
             data, fs = sf.read(target_path)
             
-            print(f"PLaying sound file: {target_path}")
+            self.get_logger().info(f"Playing sound file: {target_path}")
             sd.play(data, fs)
             sd.wait()  
-            # print("Mini Pupper 2 audio playback end.")
+            
+            response.success = True
+            response.message = f"Successfully played sound: '{target_path}'"
+            self.get_logger().info(response.message)
             
         except Exception as e:
-            print(f"An error occurred during playback config: {e}")
+            response.success = False
+            response.message = f"An error occurred during playback config: {e}"
+            self.get_logger().error(response.message)
                         
         return response
 

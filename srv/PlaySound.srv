@@ -1,4 +1,4 @@
-string image_path       # Path to sound file 
+string sound_path       # Absolute path to the sound file on disk
 ---
-bool success            # True if successfully queued to the printer queue
+bool success            # True if the sound played successfully
 string message          # Status details or debugging error logs
