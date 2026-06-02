@@ -19,7 +19,7 @@ WELCOME_TALK_SECONDS = 6.0
 READY_TALK_SECONDS = 7.0
 READY_CONFIRMED_SECONDS = 3.0
 POSE_THINKING_SECONDS = 2.0
-POSE_SUGGESTION_SECONDS = 5.0
+POSE_SUGGESTION_SECONDS = 8.0
 COUNTDOWN_INTRO_SECONDS = 2.0
 COUNTDOWN_SECONDS = 1.0
 PHOTO_CAPTURE_SECONDS = 1.5
@@ -382,6 +382,7 @@ class PupperFSM(Node):
 
     def show_countdown_step(self):
         self.say(str(self.countdown_number))
+        self.show_screen(f'countdown_{self.countdown_number}')
         self.state_timer = self.create_timer(
             COUNTDOWN_SECONDS,
             self.advance_countdown
