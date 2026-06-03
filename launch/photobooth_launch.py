@@ -27,7 +27,8 @@ def generate_launch_description():
         ('photo_processing_node.py', 'photo_processing_node'),
         ('printer_node.py', 'printer_node'),
         ('screen_node.py', 'screen_node'),
-        ('touch_node.py', 'touch_node')
+        ('touch_node.py', 'touch_node'),
+        ('speaker_node.py', 'speaker_node')
     ]
 
     for executable_name, config_key in nodes_info:
