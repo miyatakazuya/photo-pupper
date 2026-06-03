@@ -15,9 +15,12 @@
 
 import random
 from enum import Enum
+from pathlib import Path
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from ament_index_python.packages import get_package_share_directory
+from photo_pupper.srv import PlaySound
 
 
 FRONT_CONFIRM = 'FRONT_CONFIRM'
@@ -145,6 +148,9 @@ class PupperFSM(Node):
             self.movement_callback,
             10
         )
+
+        self.play_sound_client = self.create_client(PlaySound, 'play_sound')
+        self.audio_dir = Path(get_package_share_directory('photo_pupper')) / 'resource' / 'audio'
 
         self.state = FSMState.IDLE
         self.ready_yes_selected = True
@@ -413,8 +419,8 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CAPTURE
         self.show_screen('photo_capture') # screen flash
-        # Later this triggers the camera, flash screen, and shutter sound.
-        self.get_logger().info('[Snapshot sound placeholder]')
+        # Later this triggers the camera and flash screen.
+        self.play_sound('/usr/share/sounds/alsa/Noise.wav')
         self.captured_photo_path = 'mock_captured_photo'
         self.state_timer = self.create_timer(
             PHOTO_CAPTURE_SECONDS,
@@ -587,7 +593,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PRINT_COMPLETE
         self.show_screen('done')
-        self.get_logger().info('[Print complete sound placeholder]')
+        self.play_sound('/usr/share/sounds/speech-dispatcher/dummy-message.wav')
         self.state_timer = self.create_timer(
             PRINT_COMPLETE_SECONDS,
             self.enter_goodbye_talk
@@ -678,9 +684,61 @@ class PupperFSM(Node):
         self.movement_publisher.publish(msg)
         self.get_logger().info(f'Movement command: {movement_command}')
 
+    def play_sound(self, sound_path):
+        if not self.play_sound_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn("PlaySound service not available")
+            return
+        req = PlaySound.Request()
+        req.sound_path = sound_path
+        self.get_logger().info(f"Calling PlaySound service with: {sound_path}")
+        self.play_sound_client.call_async(req)
+
     def say(self, text):
-        # Replace this logger with TTS/audio later.
         self.get_logger().info(f'[Pupper says] {text}')
+        
+        phrases_map = {
+            "Hi! I'm Pupper, your photo booth helper. I'll help you choose a mood, pick a pose, take your picture, decorate it, and print it for you.": "welcome",
+            "Before we start, make sure you're okay with me taking your photo and printing it for this demo. If that sounds good, choose Yes. If not, choose No.": "ready_prompt",
+            "Use my left sensor to switch options, and press my front sensor to confirm.": "sensor_instructions",
+            "Alright, sounds like you're ready. Let's start by choosing a mood for your photo.": "ready_confirmed",
+            "Pick the mood you want for your photo. Use my left sensor to cycle through the options, and press my front sensor to confirm.": "mood_instructions",
+            "Looking good. Get in view and hold that pose. Press my front sensor when you are ready for the countdown.": "camera_ready",
+            "Get ready for the countdown!": "countdown_intro",
+            "That was a great shot. You make this look easy.": "photo_reaction",
+            "Your photo came out great. Press my front sensor to continue.": "preview_continue",
+            "Would you like to keep that photo or retake it?": "review_prompt",
+            "Use my left sensor to toggle, and front to confirm.": "toggle_instructions",
+            "Great choice. Overlay selection comes next. Use my left sensor to choose which overlay theme you want, and press my front sensor to confirm.": "overlay_instructions",
+            "Applying your chosen decorations now.": "apply_overlay",
+            "Your final picture came out amazing.": "final_preview",
+            "What do you think? Keep this final photo or retake it?": "final_prompt",
+            "Perfect. I'm printing your photo now.": "printing_start",
+            "Your photo is ready. Go grab it from the printer beside me. Thanks for taking pictures with me!": "goodbye",
+            "Hmm, you're feeling happy today. Let me think...": "think_happy",
+            "Silly mood? I like it. Let me think...": "think_silly",
+            "Feeling sad today? I'll try to make this one sweet.": "think_sad",
+            "Serious mood. Let me find something strong.": "think_serious",
+            "Try a double bicep flex.": "pose_happy_1",
+            "Try making heart hands.": "pose_happy_2",
+            "Give me a big smile and thumbs up.": "pose_happy_3",
+            "Do the dab.": "pose_silly_1",
+            "Try funny hand motion on your head.": "pose_silly_2",
+            "Give me a peace sign!": "pose_silly_3",
+            "Try a fake crying pose.": "pose_sad_1",
+            "Curl up in your chair and hug your legs like you are really sad.": "pose_sad_2",
+            "Look down dramatically.": "pose_sad_3",
+            "Cross your arms like a boss.": "pose_serious_1",
+            "Stand strong and pose like superman!": "pose_serious_2",
+            "Try a thinker pose.": "pose_serious_3"
+        }
+        
+        clean_text = text.strip()
+        filename = phrases_map.get(clean_text)
+        if filename:
+            sound_file = self.audio_dir / f"{filename}.wav"
+            self.play_sound(str(sound_file))
+        else:
+            self.get_logger().info(f"No direct audio file match found for: '{clean_text}'")
 
     def clear_state_timer(self):
         if self.state_timer is not None:
