@@ -5,8 +5,8 @@
 # * Student: Austin Choi, akc006@ucsd.edu
 # * Student: Kazuya Miyata, kamiyata@ucsd.edu
 # *
-# * Description: Finite state machine node for pupper robot movement 
-# *              and display update based on touch sensor input.
+# * Description: Finite state machine node for pupper robot movement
+# *              and display update based on user input.
 # *
 # * How to use:
 # * Usage:
@@ -15,13 +15,18 @@
 
 import random
 from enum import Enum
+from pathlib import Path
+
 import rclpy
+from ament_index_python.packages import get_package_share_directory
+from photo_pupper.srv import PrintImage, ProcessPhoto
 from rclpy.node import Node
 from std_msgs.msg import String
 
 
-FRONT_CONFIRM = 'FRONT_CONFIRM'
-LEFT_CYCLE = 'LEFT_CYCLE'
+INPUT_CONFIRM = 'INPUT_CONFIRM'
+INPUT_NEXT = 'INPUT_NEXT'
+INPUT_PREVIOUS = 'INPUT_PREVIOUS'
 MOVEMENT_COMPLETE = 'MOVEMENT_COMPLETE'
 
 WALK_FORWARD = 'walk_forward'
@@ -39,13 +44,16 @@ PHOTO_REACTION_SECONDS = 3.0
 PHOTO_REVIEW_PROMPT_SECONDS = 3.0
 OVERLAY_INTRO_SECONDS = 6.0
 OVERLAY_CONFIRM_SECONDS = 2.5
-APPLY_OVERLAY_SECONDS = 1.0
 FINAL_PREVIEW_SECONDS = 3.0
 FINAL_CONFIRMATION_PROMPT_SECONDS = 3.0
 PRINT_INTRO_SECONDS = 3.0
-MOCK_PRINT_SECONDS = 4.0
+PRINTING_SCREEN_SECONDS = 4.0
 PRINT_COMPLETE_SECONDS = 2.0
 GOODBYE_TALK_SECONDS = 5.0
+ERROR_RESET_SECONDS = 3.0
+
+PLACEHOLDER_CAPTURE_IMAGE = 'happy_man.png'
+DEFAULT_PRINT_MEDIA = ''
 
 MOODS = ['happy', 'silly', 'sad', 'serious']
 OVERLAYS_BY_MOOD = {
@@ -61,7 +69,7 @@ POSE_LINES = {
         'Give me a big smile and thumbs up.',
     ],
     'silly': [
-        'Do the dab.'
+        'Do the dab.',
         'Try funny hand motion on your head',
         'Give me a peace sign!',
     ],
@@ -116,6 +124,7 @@ class FSMState(Enum):
     PRINT_COMPLETE = 28
     GOODBYE_TALK = 29
     GOODBYE_DANCE = 30
+    ERROR_RESET = 31
 
 
 class PupperFSM(Node):
@@ -133,10 +142,10 @@ class PupperFSM(Node):
             'movement_command',
             10
         )
-        self.touch_subscription = self.create_subscription(
+        self.input_subscription = self.create_subscription(
             String,
-            'touch',
-            self.touch_callback,
+            'input_event',
+            self.input_callback,
             10
         )
         self.movement_subscription = self.create_subscription(
@@ -144,6 +153,14 @@ class PupperFSM(Node):
             'movement_event',
             self.movement_callback,
             10
+        )
+        self.photo_processing_client = self.create_client(
+            ProcessPhoto,
+            'process_photo'
+        )
+        self.printer_client = self.create_client(
+            PrintImage,
+            'print_image'
         )
 
         self.state = FSMState.IDLE
@@ -158,16 +175,21 @@ class PupperFSM(Node):
         self.final_keep_selected = True
         self.captured_photo_path = None
         self.final_photo_path = None
+        self.resource_dir = (
+            Path(get_package_share_directory('photo_pupper')) / 'resource'
+        )
         self.state_timer = None
         self.enter_idle()
 
-    def touch_callback(self, msg):
-        touch_event = msg.data.strip()
+    def input_callback(self, msg):
+        input_event = msg.data.strip()
 
-        if touch_event == FRONT_CONFIRM:
-            self.handle_front_confirm()
-        elif touch_event == LEFT_CYCLE:
-            self.handle_selection_change()
+        if input_event == INPUT_CONFIRM:
+            self.handle_confirm()
+        elif input_event == INPUT_NEXT:
+            self.handle_selection_change(1)
+        elif input_event == INPUT_PREVIOUS:
+            self.handle_selection_change(-1)
 
     def movement_callback(self, msg):
         movement_event = msg.data.strip()
@@ -180,7 +202,7 @@ class PupperFSM(Node):
         ):
             self.enter_idle()
 
-    def handle_front_confirm(self):
+    def handle_confirm(self):
         if self.state == FSMState.IDLE:
             self.enter_reveal()
         elif self.state == FSMState.READY:
@@ -202,12 +224,12 @@ class PupperFSM(Node):
         elif self.state == FSMState.FINAL_CONFIRMATION:
             self.confirm_final_choice()
 
-    def handle_selection_change(self):
+    def handle_selection_change(self, direction):
         if self.state == FSMState.READY:
             self.ready_yes_selected = not self.ready_yes_selected
             self.show_ready_screen()
         elif self.state == FSMState.MOOD_SELECTION:
-            self.change_mood()
+            self.change_mood(direction)
         elif self.state == FSMState.MOOD_CONFIRMATION:
             self.mood_confirm_yes_selected = not self.mood_confirm_yes_selected
             self.show_mood_confirmation_screen()
@@ -215,7 +237,7 @@ class PupperFSM(Node):
             self.keep_photo_selected = not self.keep_photo_selected
             self.show_photo_review_screen()
         elif self.state == FSMState.OVERLAY_SELECTION:
-            self.change_overlay()
+            self.change_overlay(direction)
         elif self.state == FSMState.OVERLAY_CONFIRM_CHOICE:
             self.overlay_confirm_yes_selected = (
                 not self.overlay_confirm_yes_selected
@@ -284,8 +306,8 @@ class PupperFSM(Node):
         self.ready_yes_selected = True
         self.show_ready_screen()
         self.say(
-            'Use my left sensor to switch options, '
-            'and press my front sensor to confirm.'
+            'Use the left and right buttons to switch options, '
+            'and press confirm to choose.'
         )
 
     def confirm_ready_selection(self):
@@ -316,14 +338,14 @@ class PupperFSM(Node):
         self.show_mood_screen()
         self.say(
             'Pick the mood you want for your photo. '
-            'Use my left sensor to cycle through the options, '
-            'and press my front sensor to confirm.'
+            'Use the left and right buttons to cycle through the options, '
+            'and press confirm to choose.'
         )
         # Later this can be a animated face, blink cycle, and nod gesture.
 
-    def change_mood(self):
+    def change_mood(self, direction):
         self.selected_mood_index = (
-            self.selected_mood_index + 1
+            self.selected_mood_index + direction
         ) % len(MOODS)
         self.show_mood_screen()
 
@@ -371,7 +393,7 @@ class PupperFSM(Node):
         # Later this can switch to the DepthAI camera view.
         self.say(
             'Looking good. Get in view and hold that pose. '
-            'Press my front sensor when you are ready for the countdown.'
+            'Press confirm when you are ready for the countdown.'
         )
 
     def enter_countdown_intro(self):
@@ -413,9 +435,11 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CAPTURE
         self.show_screen('photo_capture') # screen flash
-        # Later this triggers the camera, flash screen, and shutter sound.
+        # Replace with the DepthAI snapshot path when capture is ready.
         self.get_logger().info('[Snapshot sound placeholder]')
-        self.captured_photo_path = 'mock_captured_photo'
+        self.captured_photo_path = str(
+            self.resource_dir / PLACEHOLDER_CAPTURE_IMAGE
+        )
         self.state_timer = self.create_timer(
             PHOTO_CAPTURE_SECONDS,
             self.enter_photo_reaction
@@ -436,7 +460,7 @@ class PupperFSM(Node):
         self.state = FSMState.PHOTO_PREVIEW_READY
         self.show_screen('photo_preview')
         # Later this should show the real captured photo.
-        self.say('Your photo came out great. Press my front sensor to continue.')
+        self.say('Your photo came out great. Press confirm to continue.')
 
     def enter_photo_review_prompt(self):
         self.clear_state_timer()
@@ -454,7 +478,7 @@ class PupperFSM(Node):
         self.state = FSMState.PHOTO_REVIEW_CHOICE
         self.keep_photo_selected = True
         self.show_photo_review_screen()
-        self.say('Use my left sensor to toggle, and front to confirm.')
+        self.say('Use the left and right buttons to toggle, and confirm to choose.')
 
     def confirm_photo_review_choice(self):
         if self.keep_photo_selected:
@@ -469,8 +493,8 @@ class PupperFSM(Node):
         self.show_screen('overlay_intro_talking')
         self.say(
             'Great choice. Overlay selection comes next. '
-            'Use my left sensor to choose which overlay theme you want, '
-            'and press my front sensor to confirm.'
+            'Use the left and right buttons to choose which overlay theme you want, '
+            'and press confirm to choose.'
         )
         # Later this can follow TTS and a speaking gesture.
         self.state_timer = self.create_timer(
@@ -484,9 +508,9 @@ class PupperFSM(Node):
         self.selected_overlay_index = 0
         self.show_overlay_screen()
 
-    def change_overlay(self):
+    def change_overlay(self, direction):
         self.selected_overlay_index = (
-            self.selected_overlay_index + 1
+            self.selected_overlay_index + direction
         ) % len(OVERLAYS_BY_MOOD[self.current_mood()])
         self.show_overlay_screen()
 
@@ -505,7 +529,7 @@ class PupperFSM(Node):
         self.state = FSMState.OVERLAY_CONFIRM_CHOICE
         self.overlay_confirm_yes_selected = True
         self.show_overlay_confirmation_screen()
-        self.say('Use my left sensor to choose, and front to confirm.')
+        self.say('Use the left and right buttons to choose, and confirm to choose.')
 
     def confirm_overlay_choice(self):
         if self.overlay_confirm_yes_selected:
@@ -518,12 +542,41 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.APPLY_OVERLAY
         self.show_screen('apply_overlay')
-        # Later this calls the photo processing service and stores its output path.
-        self.final_photo_path = 'mock_final_photo'
-        self.state_timer = self.create_timer(
-            APPLY_OVERLAY_SECONDS,
-            self.enter_final_preview
+
+        if not self.photo_processing_client.service_is_ready():
+            self.enter_error_reset('Sorry, photo processing is not ready. Resetting.')
+            return
+
+        request = ProcessPhoto.Request()
+        request.input_path = self.captured_photo_path
+        request.overlay_type = self.current_overlay_type()
+        request.output_path = ''
+
+        future = self.photo_processing_client.call_async(request)
+        future.add_done_callback(self.handle_process_photo_response)
+        self.get_logger().info(
+            f'Processing photo with overlay: {self.current_overlay()}'
         )
+
+    def handle_process_photo_response(self, future):
+        if self.state != FSMState.APPLY_OVERLAY:
+            return
+
+        try:
+            response = future.result()
+        except Exception as error:
+            self.get_logger().error(f'Photo processing failed: {error}')
+            self.enter_error_reset('Sorry, the photo overlay had trouble. Resetting.')
+            return
+
+        if not response.success:
+            self.get_logger().error(f'Photo processing failed: {response.message}')
+            self.enter_error_reset('Sorry, the photo overlay had trouble. Resetting.')
+            return
+
+        self.final_photo_path = response.processed_path
+        self.get_logger().info(f'Processed photo path: {self.final_photo_path}')
+        self.enter_final_preview()
 
     def enter_final_preview(self):
         self.clear_state_timer()
@@ -552,7 +605,7 @@ class PupperFSM(Node):
         self.state = FSMState.FINAL_CONFIRMATION
         self.final_keep_selected = True
         self.show_final_confirmation_screen()
-        self.say('Use my left sensor to toggle, and front to confirm.')
+        self.say('Use the left and right buttons to toggle, and confirm to choose.')
 
     def confirm_final_choice(self):
         if self.final_keep_selected:
@@ -576,10 +629,38 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PRINTING
         self.show_screen('printing')
-        # Later this will call the PrintImage service from printer_node.py.
-        self.get_logger().info(f'Mock printing image: {self.final_photo_path}')
+
+        if not self.printer_client.service_is_ready():
+            self.enter_error_reset('Sorry, the printer is not ready. Resetting.')
+            return
+
+        request = PrintImage.Request()
+        request.image_path = self.final_photo_path
+        request.media_size = DEFAULT_PRINT_MEDIA
+
+        future = self.printer_client.call_async(request)
+        future.add_done_callback(self.handle_print_response)
+        self.get_logger().info(f'Printing image: {self.final_photo_path}')
+
+    def handle_print_response(self, future):
+        if self.state != FSMState.PRINTING:
+            return
+
+        try:
+            response = future.result()
+        except Exception as error:
+            self.get_logger().error(f'Print failed: {error}')
+            self.enter_error_reset('Sorry, the printer had trouble. Resetting.')
+            return
+
+        if not response.success:
+            self.get_logger().error(f'Print failed: {response.message}')
+            self.enter_error_reset('Sorry, the printer had trouble. Resetting.')
+            return
+
+        self.get_logger().info(response.message)
         self.state_timer = self.create_timer(
-            MOCK_PRINT_SECONDS,
+            PRINTING_SCREEN_SECONDS,
             self.enter_print_complete
         )
 
@@ -612,6 +693,16 @@ class PupperFSM(Node):
         self.state = FSMState.GOODBYE_DANCE
         self.show_screen('done')
         self.send_movement(SUCCESS_DANCE)
+
+    def enter_error_reset(self, message):
+        self.clear_state_timer()
+        self.state = FSMState.ERROR_RESET
+        self.show_screen('error')
+        self.say(message)
+        self.state_timer = self.create_timer(
+            ERROR_RESET_SECONDS,
+            self.enter_idle
+        )
 
     def show_ready_screen(self):
         if self.ready_yes_selected:
@@ -665,6 +756,10 @@ class PupperFSM(Node):
 
     def current_overlay_label(self):
         return self.current_overlay().replace('_', ' ').title()
+
+    def current_overlay_type(self):
+        # Replace this when ProcessPhoto.srv has one enum per overlay.
+        return ProcessPhoto.Request.OVERLAY_FLOWERS
 
     def show_screen(self, screen_name):
         msg = String()

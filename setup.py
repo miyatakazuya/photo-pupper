@@ -31,6 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             'fsm_node = photo_pupper.fsm_node:main',
+            'gamepad_node = photo_pupper.gamepad_node:main',
             'movement_node = photo_pupper.movement_node:main',
             'people_detection_node = photo_pupper.people_detection_node:main',
             'photo_processing_node = photo_pupper.photo_processing_node:main',

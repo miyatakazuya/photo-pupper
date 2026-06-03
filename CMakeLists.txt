@@ -20,6 +20,7 @@ install(DIRECTORY photo_pupper
 
 install(PROGRAMS
   photo_pupper/fsm_node.py
+  photo_pupper/gamepad_node.py
   photo_pupper/movement_node.py
   photo_pupper/people_detection_node.py
   photo_pupper/photo_processing_node.py

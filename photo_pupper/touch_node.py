@@ -58,8 +58,8 @@ except (ModuleNotFoundError, ImportError):
 touchPin_Front = 6
 touchPin_Left = 3
 
-FRONT_CONFIRM = 'FRONT_CONFIRM'
-LEFT_CYCLE = 'LEFT_CYCLE'
+INPUT_CONFIRM = 'INPUT_CONFIRM'
+INPUT_NEXT = 'INPUT_NEXT'
 
 TIMER_PERIOD = 0.05
 RELEASE_TICKS_REQUIRED = 5
@@ -78,7 +78,7 @@ class TouchPublisher(Node):
         super().__init__('touch_publisher')
         if not HAS_GPIO:
             self.get_logger().info("RPi.GPIO module not found. Using MOCK GPIO.")
-        self.publisher_ = self.create_publisher(String, 'touch', 10)
+        self.publisher_ = self.create_publisher(String, 'input_event', 10)
         self.touch_is_held = False
         self.release_ticks = RELEASE_TICKS_REQUIRED
         self.timer = self.create_timer(TIMER_PERIOD, self.timer_callback)
@@ -112,9 +112,9 @@ class TouchPublisher(Node):
         active_events = []
 
         if not GPIO.input(touchPin_Front):
-            active_events.append(FRONT_CONFIRM)
+            active_events.append(INPUT_CONFIRM)
         if not GPIO.input(touchPin_Left):
-            active_events.append(LEFT_CYCLE)
+            active_events.append(INPUT_NEXT)
 
         if len(active_events) != 1:
             return None

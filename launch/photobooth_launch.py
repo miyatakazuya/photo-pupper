@@ -22,6 +22,7 @@ def generate_launch_description():
     # Define the nodes in the photobooth system
     nodes_info = [
         ('fsm_node.py', 'fsm_node'),
+        ('gamepad_node.py', 'gamepad_node'),
         ('movement_node.py', 'movement_node'),
         ('people_detection_node.py', 'people_detection_node'),
         ('photo_processing_node.py', 'photo_processing_node'),
