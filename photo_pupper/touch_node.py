@@ -31,9 +31,27 @@
 # Description: Mini Pupper touch pannel test script.
 #
 import rclpy
-import RPi.GPIO as GPIO
 from rclpy.node import Node
 from std_msgs.msg import String
+
+try:
+    import RPi.GPIO as GPIO
+    HAS_GPIO = True
+except (ModuleNotFoundError, ImportError):
+    HAS_GPIO = False
+    class MockGPIO:
+        BCM = 11
+        IN = 1
+        OUT = 2
+        def setmode(self, mode):
+            pass
+        def setup(self, pin, mode):
+            pass
+        def input(self, pin):
+            return True
+        def cleanup(self, pins=None):
+            pass
+    GPIO = MockGPIO()
 
 # There are 4 areas for touch actions
 # Each GPIO to each touch area
@@ -58,6 +76,8 @@ class TouchPublisher(Node):
 
     def __init__(self):
         super().__init__('touch_publisher')
+        if not HAS_GPIO:
+            self.get_logger().info("RPi.GPIO module not found. Using MOCK GPIO.")
         self.publisher_ = self.create_publisher(String, 'touch', 10)
         self.touch_is_held = False
         self.release_ticks = RELEASE_TICKS_REQUIRED

@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
+# *************************************************
+# * Filename: fsm_node.py
+# * Student: Kane Li, kal036@ucsd.edu
+# * Student: Austin Choi, akc006@ucsd.edu
+# * Student: Kazuya Miyata, kamiyata@ucsd.edu
+# *
+# * Description: Finite state machine node for pupper robot movement 
+# *              and display update based on touch sensor input.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run lab2task5 fsm_node
+# *************************************************
 
 import random
 from enum import Enum
-
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String

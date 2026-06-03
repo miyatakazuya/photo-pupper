@@ -1,0 +1,14 @@
+# Request
+string input_path          # Absolute path to the raw camera photo on disk
+uint8 overlay_type         # Enum choice for the frame overlay
+
+# Overlay Type Enum Constants
+uint8 OVERLAY_NONE = 0
+uint8 OVERLAY_FLOWERS = 1
+
+string output_path         # Optional: Specific path to save the output (generates one if empty)
+---
+# Response
+bool success               # True if successfully overlayed and saved
+string message             # Status details, success metrics, or error logs
+string processed_path      # The absolute path of the generated final image
