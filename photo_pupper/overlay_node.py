@@ -103,23 +103,23 @@ class DepthAIOverlayNode(Node):
 
             try:
                 label = self.labelMap[t.label]
-            except:
+            except (IndexError, KeyError, TypeError):
                 label = t.label
-
-            if label == 'person':
-                label == 'IDK MAN'
-
-            cv2.putText(frame, str(label), (x1 + 10, y1 + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"ID: {[t.id]}", (x1 + 10, y1 + 35), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, t.status.name, (x1 + 10, y1 + 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), self.color, 1)
-
-            cv2.putText(frame, f"X: {int(t.spatialCoordinates.x)} mm", (x1 + 10, y1 + 65), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"Y: {int(t.spatialCoordinates.y)} mm", (x1 + 10, y1 + 80), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"Z: {int(t.spatialCoordinates.z)} mm", (x1 + 10, y1 + 95), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
             
-            if t.velocity is not None and t.speed is not None:
-                cv2.putText(frame, f"Speed: {t.speed:.2f} m/s", (x1 + 10, y1 + 155), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            # if a person and not in center, tell to move left or right
+            if label == "person":
+                center = (x1 + x2) / 2, (y1 + y2) / 2
+                # if person is not within 10% of center, tell to move left or right
+                if abs(center[0] - frame.shape[1] / 2) > frame.shape[1] * 0.1:
+                    if center[0] < frame.shape[1] / 2:
+                        self.get_logger().info("move left")
+                    else:
+                        self.get_logger().info("move right")
+                else:
+                    self.get_logger().info("centered")
+
+                # if person doesn't take up between 1/3 and 2/3 of the image, tell to move forward or backward
+                break
 
         # In-Memory JPEG Compression
         success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
