@@ -8,3 +8,4 @@ photobooth_nodes:
   printer_node: 1
   screen_node: 1
   touch_node: 0
+  speaker_node: 1
