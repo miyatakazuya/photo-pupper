@@ -3,9 +3,20 @@
 from pathlib import Path
 
 import rclpy
-from MangDang.mini_pupper.display import Display
+from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
 from std_msgs.msg import String
+
+try:
+    from MangDang.mini_pupper.display import Display
+    HAS_DISPLAY = True
+except (ModuleNotFoundError, ImportError):
+    HAS_DISPLAY = False
+    class Display:
+        def __init__(self):
+            pass
+        def show_image(self, path):
+            pass
 
 
 PLACEHOLDER_IMAGE = 'placeholder.jpg'
@@ -117,13 +128,15 @@ SCREEN_ANIMATIONS = {
     ],
 }
 
-RESOURCE_DIR = Path(__file__).resolve().parents[1] / 'resource'
+RESOURCE_DIR = Path(get_package_share_directory('photo_pupper')) / 'resource'
 
 
 class ScreenSubscriber(Node):
 
     def __init__(self):
         super().__init__('screen_subscriber')
+        if not HAS_DISPLAY:
+            self.get_logger().info("MangDang display module not found. Using MOCK display.")
         self.display = Display()
         self.animation_timer = None
         self.animation_frames = []
