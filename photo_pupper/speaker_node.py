@@ -13,11 +13,11 @@ class SpeakerNode(Node):
     def __init__(self):
         super().__init__('speaker_node')
         
-        os.system("amixer -c 1 sset Master 100% unmute > /dev/null 2>&1")
-        os.system("amixer -c 1 sset PCM 100% unmute > /dev/null 2>&1")
-        os.system("amixer -c 1 sset Speaker 100% unmute > /dev/null 2>&1")
+        os.system("amixer -c 2 sset Master 80% unmute > /dev/null 2>&1")
+        os.system("amixer -c 2 sset PCM 80% unmute > /dev/null 2>&1")
+        os.system("amixer -c 2 sset Speaker 80% unmute > /dev/null 2>&1")
 
-        sd.default.device = 1
+        sd.default.device = 2 
         
         # Create the service server 
         self.srv = self.create_service(PlaySound, 'play_sound', self.play_sound_callback)
