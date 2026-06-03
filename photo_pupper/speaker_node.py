@@ -17,7 +17,7 @@ class SpeakerNode(Node):
         os.system("amixer -c 2 sset PCM 80% unmute > /dev/null 2>&1")
         os.system("amixer -c 2 sset Speaker 80% unmute > /dev/null 2>&1")
 
-        sd.default.device = 2
+        sd.default.device = 1
 
         # Create the service server
         self.srv = self.create_service(PlaySound, 'play_sound', self.play_sound_callback)
