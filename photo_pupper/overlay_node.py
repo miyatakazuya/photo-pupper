@@ -22,7 +22,11 @@ class DepthAIOverlayNode(Node):
         
         self.get_logger().info("Initializing DepthAI Pipeline...")
         self.setup_depthai_pipeline()
-        
+
+        # params
+        self.publishing = False
+        self.turn_threshold = 0.2
+
         # Service client to send movement commands
         self.cli = self.create_client(GoPupper, 'pup_command')
         while not self.cli.wait_for_service(timeout_sec=1.0):
@@ -98,7 +102,9 @@ class DepthAIOverlayNode(Node):
         # --- Everything below here is standard frame processing ---
         frame = imgFrame.getCvFrame()
         trackletsData = track.tracklets
-        
+        person_in_frame = False
+
+        move = "stay"
         for t in trackletsData:
             roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
             x1, y1 = int(roi.topLeft().x), int(roi.topLeft().y)
@@ -112,30 +118,39 @@ class DepthAIOverlayNode(Node):
             # if a person and not in center, tell to move left or right
             if label == "person":
                 center = (x1 + x2) / 2, (y1 + y2) / 2
+                
+                # Calculate how much of the screen height the person occupies
+                person_height = y2 - y1
+                frame_height = frame.shape[0]
+                height_ratio = person_height / frame_height
+                #self.get_logger().info(f"height_ratio: {height_ratio}")
+                
                 # if person is not within 10% of center, tell to move left or right
-                if abs(center[0] - frame.shape[1] / 2) > frame.shape[1] * 0.1:
+                if abs(center[0] - frame.shape[1] / 2) > frame.shape[1] * self.turn_threshold:
                     if center[0] < frame.shape[1] / 2:
-                        self.get_logger().info("turn right")
-                        self.send_move_request("turn_right")
+                        move = "turn_left"
                     else:
-                        self.get_logger().info("turn left")
-                        self.send_move_request("turn_left")
-                else:
-                    self.get_logger().info("centered")
-                # if person doesn't take up between 1/3 and 2/3 of the image, tell to move forward or backward
+                        move = "turn_right"
+                elif height_ratio < 0.25:
+                    move = "move_forward"
+                elif height_ratio > 0.9:
+                    move = "move_backward"
                 break
+        #self.get_logger().info(move)
+        self.send_move_request(move)
 
-        # In-Memory JPEG Compression
-        success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-        
-        if success:
-            msg = CompressedImage()
-            msg.header.stamp = self.get_clock().now().to_msg()
-            msg.header.frame_id = "camera_overlay_frame"
-            msg.format = "jpeg"
-            msg.data = encoded_image.tobytes()
+        if self.publishing:
+            # In-Memory JPEG Compression
+            success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             
-            self.publisher_.publish(msg)
+            if success:
+                msg = CompressedImage()
+                msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = "camera_overlay_frame"
+                msg.format = "jpeg"
+                msg.data = encoded_image.tobytes()
+                
+                self.publisher_.publish(msg)
 
     # *************************************************
     # * Name: send_move_request(self, move_command)
