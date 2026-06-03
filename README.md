@@ -78,3 +78,10 @@ The `photo_processing_node` handles overlaying frames onto raw camera photograph
     * `bool success` - `true` if overlay compositing succeeded and saved.
     * `string message` - Detailed execution trace, saved path, or warning/error logs.
     * `string processed_path` - The absolute path to the generated output image.
+
+
+### Person Following Setup 
+* **Overlay_node**: `ros2 run photo_pupper overlay_node`. By default, I disabled logging and publishing the image topic to save on compute
+* **Movement_service**: `ros2 run go_pupper_srv service`
+* **Bringup**: `ros2 launch mini_pupper_bringup bringup.launch.py`
+* **Visualizer**: `ros2 run foxglove_bridge foxglove_bridge_launch.xml`. You will also need to open up Foxglove in your browser and connect to ws://137.110.215.75:8765
