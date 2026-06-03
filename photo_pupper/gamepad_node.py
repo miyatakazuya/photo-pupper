@@ -18,9 +18,9 @@ class GamepadInputNode(Node):
 
         self.declare_parameter('joy_topic', 'joy')
         self.declare_parameter('input_topic', 'input_event')
-        self.declare_parameter('confirm_button_index', 3)
-        self.declare_parameter('next_button_index', 1)
-        self.declare_parameter('previous_button_index', 2)
+        self.declare_parameter('confirm_button_index', 2)
+        self.declare_parameter('next_button_index', 5)
+        self.declare_parameter('previous_button_index', 4)
 
         joy_topic = (
             self.get_parameter('joy_topic')
