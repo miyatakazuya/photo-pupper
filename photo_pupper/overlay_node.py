@@ -7,12 +7,13 @@ import time
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
+from pupper_interfaces.srv import GoPupper
 
 class DepthAIOverlayNode(Node):
     def __init__(self):
         super().__init__('depthai_overlay_node')
         
-        # 1. Initialize ROS Publisher
+        # Initialize ROS Publisher (for camera viewing debugging)
         self.publisher_ = self.create_publisher(
             CompressedImage, 
             '/overlay/compressed', 
@@ -22,11 +23,13 @@ class DepthAIOverlayNode(Node):
         self.get_logger().info("Initializing DepthAI Pipeline...")
         self.setup_depthai_pipeline()
         
-        # FPS Tracking vars
-        self.color = (255, 255, 255)
+        # Service client to send movement commands
+        self.cli = self.create_client(GoPupper, 'pup_command')
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Service not available, waiting...')
         
-        # 2. The ROS 2 Timer (Targeting ~20 FPS for consistency and low CPU usage)
-        timer_period = 1.0 / 20.0  # 0.05 seconds
+        # Camera callback timer (20Hz)
+        timer_period = 1.0 / 20.0
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.get_logger().info(f"Node spinning. Targeting {1.0/timer_period} FPS.")
 
@@ -112,12 +115,13 @@ class DepthAIOverlayNode(Node):
                 # if person is not within 10% of center, tell to move left or right
                 if abs(center[0] - frame.shape[1] / 2) > frame.shape[1] * 0.1:
                     if center[0] < frame.shape[1] / 2:
-                        self.get_logger().info("move left")
+                        self.get_logger().info("turn right")
+                        self.send_move_request("turn_right")
                     else:
-                        self.get_logger().info("move right")
+                        self.get_logger().info("turn left")
+                        self.send_move_request("turn_left")
                 else:
                     self.get_logger().info("centered")
-
                 # if person doesn't take up between 1/3 and 2/3 of the image, tell to move forward or backward
                 break
 
@@ -132,6 +136,18 @@ class DepthAIOverlayNode(Node):
             msg.data = encoded_image.tobytes()
             
             self.publisher_.publish(msg)
+
+    # *************************************************
+    # * Name: send_move_request(self, move_command)
+    # * Purpose: Sends an asynchronous request to the pup_command service 
+    # *          with the desired move action.
+    # * @input move_command, a string indicating movement direction.
+    # * @return None.
+    # *************************************************
+    def send_move_request(self, move_command):
+        req = GoPupper.Request()
+        req.command = move_command
+        self.cli.call_async(req)
 
 def main(args=None):
     rclpy.init(args=args)
