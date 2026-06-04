@@ -81,7 +81,7 @@ The `photo_processing_node` handles overlaying frames onto raw camera photograph
 
 
 ### Person Following Setup 
-* **Overlay_node**: `ros2 run photo_pupper overlay_node`. By default, I disabled logging and publishing the image topic to save on compute
+* **Camera_node**: `ros2 run photo_pupper camera_node`. By default, I disabled logging and publishing the image topic to save on compute. Exposes a `/save_image` service of type `std_srvs/srv/Trigger` to save the current camera frame directly to `/home/ubuntu/ros2_ws/camera_image.jpg`.
 * **Movement_service**: `ros2 run go_pupper_srv service`
 * **Bringup**: `ros2 launch mini_pupper_bringup bringup.launch.py`
 * **Visualizer**: `ros2 run foxglove_bridge foxglove_bridge_launch.xml`. You will also need to open up Foxglove in your browser and connect to ws://137.110.215.75:8765

@@ -3,20 +3,22 @@
 import cv2
 import depthai as dai
 import time
+import os
 
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from pupper_interfaces.srv import GoPupper
+from std_srvs.srv import Trigger
 
-class DepthAIOverlayNode(Node):
+class CameraNode(Node):
     def __init__(self):
-        super().__init__('depthai_overlay_node')
+        super().__init__('camera_node')
         
         # Initialize ROS Publisher (for camera viewing debugging)
         self.publisher_ = self.create_publisher(
             CompressedImage, 
-            '/overlay/compressed', 
+            '/camera/compressed', 
             10
         )
         
@@ -26,11 +28,19 @@ class DepthAIOverlayNode(Node):
         # params
         self.publishing = False
         self.turn_threshold = 0.2
+        self.latest_frame = None
 
         # Service client to send movement commands
         self.cli = self.create_client(GoPupper, 'pup_command')
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Service not available, waiting...')
+        
+        # Service server to save current camera image
+        self.save_image_srv = self.create_service(
+            Trigger,
+            'save_image',
+            self.save_image_callback
+        )
         
         # Camera callback timer (20Hz)
         timer_period = 1.0 / 20.0
@@ -101,6 +111,7 @@ class DepthAIOverlayNode(Node):
 
         # --- Everything below here is standard frame processing ---
         frame = imgFrame.getCvFrame()
+        self.latest_frame = frame
         trackletsData = track.tracklets
 
         move = "stay"
@@ -122,7 +133,6 @@ class DepthAIOverlayNode(Node):
                 person_height = y2 - y1
                 frame_height = frame.shape[0]
                 height_ratio = person_height / frame_height
-                #self.get_logger().info(f"height_ratio: {height_ratio}")
                 
                 # if person is not within 10% of center, tell to move left or right
                 if abs(center[0] - frame.shape[1] / 2) > frame.shape[1] * self.turn_threshold:
@@ -135,7 +145,7 @@ class DepthAIOverlayNode(Node):
                 elif height_ratio > 0.9:
                     move = "move_backward"
                 break
-        #self.get_logger().info(move)
+        
         self.send_move_request(move)
 
         if self.publishing:
@@ -145,27 +155,39 @@ class DepthAIOverlayNode(Node):
             if success:
                 msg = CompressedImage()
                 msg.header.stamp = self.get_clock().now().to_msg()
-                msg.header.frame_id = "camera_overlay_frame"
+                msg.header.frame_id = "camera_frame"
                 msg.format = "jpeg"
                 msg.data = encoded_image.tobytes()
                 
                 self.publisher_.publish(msg)
 
-    # *************************************************
-    # * Name: send_move_request(self, move_command)
-    # * Purpose: Sends an asynchronous request to the pup_command service 
-    # *          with the desired move action.
-    # * @input move_command, a string indicating movement direction.
-    # * @return None.
-    # *************************************************
     def send_move_request(self, move_command):
         req = GoPupper.Request()
         req.command = move_command
         self.cli.call_async(req)
 
+    def save_image_callback(self, request, response):
+        if self.latest_frame is None:
+            response.success = False
+            response.message = "Error: No camera frame captured yet."
+            return response
+        
+        save_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
+        try:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            cv2.imwrite(save_path, self.latest_frame)
+            response.success = True
+            response.message = f"Successfully saved current camera image to {save_path}"
+            self.get_logger().info(response.message)
+        except Exception as e:
+            response.success = False
+            response.message = f"Failed to save image: {str(e)}"
+            self.get_logger().error(response.message)
+        return response
+
 def main(args=None):
     rclpy.init(args=args)
-    node = DepthAIOverlayNode()
+    node = CameraNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:

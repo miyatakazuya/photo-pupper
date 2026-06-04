@@ -20,10 +20,10 @@ install(DIRECTORY photo_pupper
 )
 
 install(PROGRAMS
+  photo_pupper/camera_node.py
   photo_pupper/fsm_node.py
   photo_pupper/gamepad_node.py
   photo_pupper/movement_node.py
-  photo_pupper/people_detection_node.py
   photo_pupper/photo_processing_node.py
   photo_pupper/printer_node.py
   photo_pupper/screen_node.py

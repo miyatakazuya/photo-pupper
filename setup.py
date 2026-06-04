@@ -39,7 +39,7 @@ setup(
             'screen_node = photo_pupper.screen_node:main',
             'speaker_node = photo_pupper.speaker_node:main',
             'touch_node = photo_pupper.touch_node:main',
-            'overlay_node = photo_pupper.overlay_node:main'
+            'camera_node = photo_pupper.camera_node:main'
         ],
     },
 )

@@ -24,7 +24,7 @@ def generate_launch_description():
         ('fsm_node.py', 'fsm_node'),
         ('gamepad_node.py', 'gamepad_node'),
         ('movement_node.py', 'movement_node'),
-        ('overlay_node.py', 'overlay_node'),
+        ('camera_node.py', 'camera_node'),
         ('photo_processing_node.py', 'photo_processing_node'),
         ('printer_node.py', 'printer_node'),
         ('screen_node.py', 'screen_node'),
