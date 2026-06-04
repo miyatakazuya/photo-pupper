@@ -9,8 +9,6 @@
 
   <depend>geometry_msgs</depend>
   <depend>ament_index_python</depend>
-  <depend>rclpy</depend>
-  <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
