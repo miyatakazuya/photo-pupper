@@ -10,18 +10,24 @@ from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
+from photo_pupper.movement_node import (
+    STAY,
+    TURN_LEFT_SMALL,
+    TURN_RIGHT_SMALL,
+    STEP_FORWARD_SMALL,
+    STEP_BACKWARD_SMALL,
+)
+
 
 class CameraNode(Node):
     def __init__(self):
-        super().__init__('camera_node')
-        
+        super().__init__("camera_node")
+
         # Initialize ROS Publisher (for camera viewing debugging)
         self.publisher_ = self.create_publisher(
-            CompressedImage, 
-            '/camera/compressed', 
-            10
+            CompressedImage, "/camera/compressed", 10
         )
-        
+
         self.get_logger().info("Initializing DepthAI Pipeline...")
         self.setup_depthai_pipeline()
 
@@ -31,23 +37,17 @@ class CameraNode(Node):
         self.latest_frame = None
 
         # Publisher to send movement commands to movement_node
-        self.movement_publisher = self.create_publisher(
-            String,
-            'movement_command',
-            10
-        )
-        
+        self.movement_publisher = self.create_publisher(String, "movement_command", 10)
+
         # Service server to save current camera image
         self.save_image_srv = self.create_service(
-            Trigger,
-            'save_image',
-            self.save_image_callback
+            Trigger, "save_image", self.save_image_callback
         )
-        
+
         # Camera callback timer (20Hz)
         timer_period = 1.0 / 20.0
         self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.get_logger().info(f"Node spinning. Targeting {1.0/timer_period} FPS.")
+        self.get_logger().info(f"Node spinning. Targeting {1.0 / timer_period} FPS.")
 
     def setup_depthai_pipeline(self):
         """Builds and starts the pipeline, storing hardware queues."""
@@ -55,9 +55,15 @@ class CameraNode(Node):
         useSpatialAssociation = False
 
         self.pipeline = dai.Pipeline()
-        camRgb = self.pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_A)
-        monoLeft = self.pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_B)
-        monoRight = self.pipeline.create(dai.node.Camera).build(dai.CameraBoardSocket.CAM_C)
+        camRgb = self.pipeline.create(dai.node.Camera).build(
+            dai.CameraBoardSocket.CAM_A
+        )
+        monoLeft = self.pipeline.create(dai.node.Camera).build(
+            dai.CameraBoardSocket.CAM_B
+        )
+        monoRight = self.pipeline.create(dai.node.Camera).build(
+            dai.CameraBoardSocket.CAM_C
+        )
 
         stereo = self.pipeline.create(dai.node.StereoDepth)
         leftOutput = monoLeft.requestOutput((640, 400))
@@ -65,7 +71,9 @@ class CameraNode(Node):
         leftOutput.link(stereo.left)
         rightOutput.link(stereo.right)
 
-        spatialDetectionNetwork = self.pipeline.create(dai.node.SpatialDetectionNetwork).build(camRgb, stereo, "yolov6-nano")
+        spatialDetectionNetwork = self.pipeline.create(
+            dai.node.SpatialDetectionNetwork
+        ).build(camRgb, stereo, "yolov6-nano")
         self.objectTracker = self.pipeline.create(dai.node.ObjectTracker)
 
         spatialDetectionNetwork.setConfidenceThreshold(0.6)
@@ -77,8 +85,10 @@ class CameraNode(Node):
 
         self.objectTracker.setDetectionLabelsToTrack([0])
         self.objectTracker.setTrackerType(dai.TrackerType.SHORT_TERM_IMAGELESS)
-        self.objectTracker.setTrackerIdAssignmentPolicy(dai.TrackerIdAssignmentPolicy.SMALLEST_ID)
-        
+        self.objectTracker.setTrackerIdAssignmentPolicy(
+            dai.TrackerIdAssignmentPolicy.SMALLEST_ID
+        )
+
         if useSpatialAssociation:
             self.objectTracker.setSpatialAssociation(True)
             self.objectTracker.setSpatialAssociationWeight(0.5)
@@ -86,15 +96,21 @@ class CameraNode(Node):
             self.objectTracker.setSpatialDepthAwareScale(0.1)
 
         # Store queues as instance variables so the timer can access them
-        self.preview_queue = self.objectTracker.passthroughTrackerFrame.createOutputQueue()
+        self.preview_queue = (
+            self.objectTracker.passthroughTrackerFrame.createOutputQueue()
+        )
         self.tracklets_queue = self.objectTracker.out.createOutputQueue()
 
         if fullFrameTracking:
-            camRgb.requestFullResolutionOutput().link(self.objectTracker.inputTrackerFrame)
+            camRgb.requestFullResolutionOutput().link(
+                self.objectTracker.inputTrackerFrame
+            )
             self.objectTracker.inputTrackerFrame.setBlocking(False)
             self.objectTracker.inputTrackerFrame.setMaxSize(1)
         else:
-            spatialDetectionNetwork.passthrough.link(self.objectTracker.inputTrackerFrame)
+            spatialDetectionNetwork.passthrough.link(
+                self.objectTracker.inputTrackerFrame
+            )
 
         spatialDetectionNetwork.passthrough.link(self.objectTracker.inputDetectionFrame)
         spatialDetectionNetwork.out.link(self.objectTracker.inputDetections)
@@ -116,7 +132,7 @@ class CameraNode(Node):
         self.latest_frame = frame
         trackletsData = track.tracklets
 
-        move = "stay"
+        move = STAY
         for t in trackletsData:
             roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
             x1, y1 = int(roi.topLeft().x), int(roi.topLeft().y)
@@ -126,41 +142,46 @@ class CameraNode(Node):
                 label = self.labelMap[t.label]
             except (IndexError, KeyError, TypeError):
                 label = t.label
-            
+
             # if a person and not in center, tell to move left or right
             if label == "person":
                 center = (x1 + x2) / 2, (y1 + y2) / 2
-                
+
                 # Calculate how much of the screen height the person occupies
                 person_height = y2 - y1
                 frame_height = frame.shape[0]
                 height_ratio = person_height / frame_height
-                
+
                 # if person is not within 10% of center, tell to move left or right
-                if abs(center[0] - frame.shape[1] / 2) > frame.shape[1] * self.turn_threshold:
+                if (
+                    abs(center[0] - frame.shape[1] / 2)
+                    > frame.shape[1] * self.turn_threshold
+                ):
                     if center[0] < frame.shape[1] / 2:
-                        move = "turn_left"
+                        move = TURN_LEFT_SMALL
                     else:
-                        move = "turn_right"
+                        move = TURN_RIGHT_SMALL
                 elif height_ratio < 0.25:
-                    move = "move_forward"
+                    move = STEP_FORWARD_SMALL
                 elif height_ratio > 0.9:
-                    move = "move_backward"
+                    move = STEP_BACKWARD_SMALL
                 break
-        
+
         self.send_move_request(move)
 
         if self.publishing:
             # In-Memory JPEG Compression
-            success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
-            
+            success, encoded_image = cv2.imencode(
+                ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            )
+
             if success:
                 msg = CompressedImage()
                 msg.header.stamp = self.get_clock().now().to_msg()
                 msg.header.frame_id = "camera_frame"
                 msg.format = "jpeg"
                 msg.data = encoded_image.tobytes()
-                
+
                 self.publisher_.publish(msg)
 
     def send_move_request(self, move_command):
@@ -173,8 +194,8 @@ class CameraNode(Node):
             response.success = False
             response.message = "Error: No camera frame captured yet."
             return response
-        
-        save_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
+
+        save_path = "/home/ubuntu/ros2_ws/camera_image.jpg"
         try:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             cv2.imwrite(save_path, self.latest_frame)
@@ -187,6 +208,7 @@ class CameraNode(Node):
             self.get_logger().error(response.message)
         return response
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = CameraNode()
@@ -198,5 +220,6 @@ def main(args=None):
         node.destroy_node()
         rclpy.shutdown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
