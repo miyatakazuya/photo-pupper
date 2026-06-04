@@ -8,7 +8,7 @@ import os
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
-from pupper_interfaces.srv import GoPupper
+from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 class CameraNode(Node):
@@ -30,10 +30,12 @@ class CameraNode(Node):
         self.turn_threshold = 0.2
         self.latest_frame = None
 
-        # Service client to send movement commands
-        self.cli = self.create_client(GoPupper, 'pup_command')
-        while not self.cli.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Service not available, waiting...')
+        # Publisher to send movement commands to movement_node
+        self.movement_publisher = self.create_publisher(
+            String,
+            'movement_command',
+            10
+        )
         
         # Service server to save current camera image
         self.save_image_srv = self.create_service(
@@ -162,9 +164,9 @@ class CameraNode(Node):
                 self.publisher_.publish(msg)
 
     def send_move_request(self, move_command):
-        req = GoPupper.Request()
-        req.command = move_command
-        self.cli.call_async(req)
+        msg = String()
+        msg.data = move_command
+        self.movement_publisher.publish(msg)
 
     def save_image_callback(self, request, response):
         if self.latest_frame is None:
