@@ -33,7 +33,7 @@ class CameraNode(Node):
 
         # params
         self.publishing = False
-        self.turn_threshold = 0.2
+        self.turn_threshold = 0.1
         self.latest_frame = None
 
         # Publisher to send movement commands to movement_node
@@ -45,7 +45,7 @@ class CameraNode(Node):
         )
 
         # Camera callback timer (20Hz)
-        timer_period = 1.0 / 20.0
+        timer_period = 1.0 / 2.0
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.get_logger().info(f"Node spinning. Targeting {1.0 / timer_period} FPS.")
 
