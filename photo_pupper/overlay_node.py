@@ -102,7 +102,6 @@ class DepthAIOverlayNode(Node):
         # --- Everything below here is standard frame processing ---
         frame = imgFrame.getCvFrame()
         trackletsData = track.tracklets
-        person_in_frame = False
 
         move = "stay"
         for t in trackletsData:
