@@ -18,6 +18,10 @@ STOP = 'stop'
 
 TURN_LEFT_SMALL = 'turn_left_small'
 TURN_RIGHT_SMALL = 'turn_right_small'
+STEP_LEFT = 'step_left'
+STEP_RIGHT = 'step_right'
+STEP_FORWARD = 'step_forward'
+STEP_BACKWARD = 'step_backward'
 STEP_LEFT_SMALL = 'step_left_small'
 STEP_RIGHT_SMALL = 'step_right_small'
 STEP_FORWARD_SMALL = 'step_forward_small'
@@ -82,6 +86,34 @@ PRIMITIVE_MOVES = {
         'linear_y': 0.0,
         'angular_z': -TURN_SPEED,
     },
+     STEP_FORWARD: {
+        'kind': 'velocity',
+        'duration': STEP_SECONDS,
+        'linear_x': 0.15,
+        'linear_y': 0.0,
+        'angular_z': 0.0,
+    },
+    STEP_BACKWARD: {
+        'kind': 'velocity',
+        'duration': STEP_SECONDS,
+        'linear_x': -0.15,
+        'linear_y': 0.0,
+        'angular_z': 0.0,
+    },
+    STEP_LEFT: {
+        'kind': 'velocity',
+        'duration': STEP_SECONDS,
+        'linear_x': 0.0,
+        'linear_y': 0.12,
+        'angular_z': 0.0,
+    },
+    STEP_RIGHT: {
+        'kind': 'velocity',
+        'duration': STEP_SECONDS,
+        'linear_x': 0.0,
+        'linear_y': -0.12,
+        'angular_z': 0.0,
+    },
     'look_up': {
         'kind': 'pose',
         'duration': POSE_SECONDS,
@@ -91,9 +123,9 @@ PRIMITIVE_MOVES = {
     },
     'look_up_fast': {
         'kind': 'pose',
-        'duration': 0.2,
+        'duration': POSE_SECONDS,
         'roll': 0.0,
-        'pitch': -0.2,
+        'pitch': -0.3,
         'yaw': 0.0,
     },
     'look_up_slow': {
@@ -131,9 +163,23 @@ PRIMITIVE_MOVES = {
         'pitch': 0.0,
         'yaw': 0.2,
     },
+     'look_left_slow': {
+        'kind': 'pose',
+        'duration': 0.8,
+        'roll': 0.0,
+        'pitch': 0.0,
+        'yaw': 0.2,
+    },
     'look_right': {
         'kind': 'pose',
         'duration': POSE_SECONDS,
+        'roll': 0.0,
+        'pitch': 0.0,
+        'yaw': -0.2,
+    },
+    'look_right_slow': {
+        'kind': 'pose',
+        'duration': 0.8,
         'roll': 0.0,
         'pitch': 0.0,
         'yaw': -0.2,
@@ -153,6 +199,10 @@ PRIMITIVE_MOVES = {
         'kind': 'pause',
         'duration': 0.6,
     },
+    'pause_long': {
+        'kind': 'pause',
+        'duration': 1.5,
+    },
 }
 
 MOVEMENT_SEQUENCES = {
@@ -164,11 +214,17 @@ MOVEMENT_SEQUENCES = {
     'turn_left': [TURN_LEFT_SMALL],
     'turn_right': [TURN_RIGHT_SMALL],
     'look_up': ['look_up'],
+    'look_up_slow': ['look_up_slow'],
+    'look_up_fast': ['look_up_fast'],
     'look_down': ['look_down'],
+    'look_down_slow': ['look_down_slow'],
+    'look_down_fast': ['look_down_fast'],
     'look_left': ['look_left'],
+    'look_left_slow': ['look_left_slow'],
     'look_right': ['look_right'],
-    GREETING_NOD: ['look_up_slow', 'look_down', 'look_right', LOOK_MIDDLE, 'look_up_fast', 'look_down_fast', LOOK_MIDDLE],
-    THINKING_MOTION: ['look_left', 'pause_short', 'look_right', LOOK_MIDDLE],
+    'look_right_slow': ['look_right_slow'],
+    GREETING_NOD: ['look_up_fast', 'look_down_slow', 'look_up_fast', 'look_down_slow', 'look_up_fast', 'look_down_slow', LOOK_MIDDLE],
+    THINKING_MOTION: ['look_up_slow', 'pause_short', 'look_right', LOOK_MIDDLE],
     SPEAKING_MOTION: ['look_up_slow', 'look_down', 'look_right', LOOK_MIDDLE, 'look_up_fast', 'look_down_fast', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', 'look_up', LOOK_MIDDLE],
     SUCCESS_DANCE: [
         STEP_LEFT_SMALL,
@@ -187,9 +243,13 @@ MOVEMENT_SEQUENCES = {
     TURN_LEFT_SMALL: [TURN_LEFT_SMALL],
     TURN_RIGHT_SMALL: [TURN_RIGHT_SMALL],
     STEP_LEFT_SMALL: [STEP_LEFT_SMALL],
+    STEP_LEFT: [STEP_LEFT],
     STEP_RIGHT_SMALL: [STEP_RIGHT_SMALL],
+    STEP_RIGHT: [STEP_RIGHT],
     STEP_FORWARD_SMALL: [STEP_FORWARD_SMALL],
+    STEP_FORWARD: [STEP_FORWARD],
     STEP_BACKWARD_SMALL: [STEP_BACKWARD_SMALL],
+    STEP_BACKWARD: [STEP_BACKWARD],
     STAY: ['pause_medium'],
 }
 
@@ -215,7 +275,7 @@ class MovementNode(Node):
     def __init__(self):
         super().__init__('movement_node')
         # False keeps movement mocked and log only; true publishes real cmd_vel/body pose.
-        self.declare_parameter('real_movement', False)
+        self.declare_parameter('real_movement', True)
         self.real_movement = (
             self.get_parameter('real_movement')
             .get_parameter_value()

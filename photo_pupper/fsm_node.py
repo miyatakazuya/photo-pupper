@@ -369,7 +369,11 @@ class PupperFSM(Node):
         self.state = FSMState.MOOD_SELECTION
         self.selected_mood_index = 0
         self.show_mood_screen()
-        self.say_clip('mood_instructions')
+        self.say_clip(
+            'mood_instructions',
+            None,
+            SPEAKING_MOTION
+        )
 
     def change_mood(self, direction):
         self.selected_mood_index = (
@@ -409,12 +413,14 @@ class PupperFSM(Node):
         self.show_pose_screen()
         self.say_clip(
             f'pose_{self.current_mood()}_{self.selected_pose_index + 1}',
-            self.enter_camera_ready
+            self.enter_camera_ready,
+            SPEAKING_MOTION
         )
 
     def enter_camera_ready(self):
         self.clear_state_timer()
         self.state = FSMState.CAMERA_READY
+        # reframing
         self.show_screen('camera_ready')
         # Later this can switch to the DepthAI camera view.
         self.say_clip('camera_ready')
