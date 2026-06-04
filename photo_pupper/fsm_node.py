@@ -22,6 +22,7 @@ from ament_index_python.packages import get_package_share_directory
 from photo_pupper.srv import PlaySound, PrintImage, ProcessPhoto
 from rclpy.node import Node
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 
 
 INPUT_CONFIRM = 'INPUT_CONFIRM'
@@ -162,6 +163,10 @@ class PupperFSM(Node):
             PrintImage,
             'print_image'
         )
+        self.save_image_client = self.create_client(
+            Trigger,
+            'save_image'
+        )
 
         self.play_sound_client = self.create_client(PlaySound, 'play_sound')
         self.audio_dir = Path(get_package_share_directory('photo_pupper')) / 'resource' / 'audio'
@@ -177,7 +182,7 @@ class PupperFSM(Node):
         self.overlay_confirm_yes_selected = True
         self.final_keep_selected = True
         self.captured_photo_path = None
-        self.final_photo_path = None
+        self.final_photo_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
         self.resource_dir = (
             Path(get_package_share_directory('photo_pupper')) / 'resource'
         )
@@ -633,6 +638,33 @@ class PupperFSM(Node):
         self.state = FSMState.PRINTING
         self.show_screen('printing')
 
+        if not self.save_image_client.service_is_ready():
+            self.enter_error_reset('Sorry, the camera is not ready. Resetting.')
+            return
+
+        request = Trigger.Request()
+        future = self.save_image_client.call_async(request)
+        future.add_done_callback(self.handle_save_image_response)
+        self.get_logger().info('Requesting camera_node to save current image...')
+
+    def handle_save_image_response(self, future):
+        if self.state != FSMState.PRINTING:
+            return
+
+        try:
+            response = future.result()
+        except Exception as error:
+            self.get_logger().error(f'Save image failed: {error}')
+            self.enter_error_reset('Sorry, the camera had trouble. Resetting.')
+            return
+
+        if not response.success:
+            self.get_logger().error(f'Save image failed: {response.message}')
+            self.enter_error_reset('Sorry, the camera had trouble. Resetting.')
+            return
+
+        self.get_logger().info('Image saved successfully. Now printing...')
+
         if not self.printer_client.service_is_ready():
             self.enter_error_reset('Sorry, the printer is not ready. Resetting.')
             return
@@ -641,8 +673,8 @@ class PupperFSM(Node):
         request.image_path = self.final_photo_path
         request.media_size = DEFAULT_PRINT_MEDIA
 
-        future = self.printer_client.call_async(request)
-        future.add_done_callback(self.handle_print_response)
+        future_print = self.printer_client.call_async(request)
+        future_print.add_done_callback(self.handle_print_response)
         self.get_logger().info(f'Printing image: {self.final_photo_path}')
 
     def handle_print_response(self, future):
