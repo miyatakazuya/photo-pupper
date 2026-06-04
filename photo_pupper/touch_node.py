@@ -30,59 +30,107 @@
 #
 # Description: Mini Pupper touch pannel test script.
 #
-import time
 import rclpy
-import RPi.GPIO as GPIO
 from rclpy.node import Node
 from std_msgs.msg import String
+
+try:
+    import RPi.GPIO as GPIO
+    HAS_GPIO = True
+except (ModuleNotFoundError, ImportError):
+    HAS_GPIO = False
+    class MockGPIO:
+        BCM = 11
+        IN = 1
+        OUT = 2
+        def setmode(self, mode):
+            pass
+        def setup(self, pin, mode):
+            pass
+        def input(self, pin):
+            return True
+        def cleanup(self, pins=None):
+            pass
+    GPIO = MockGPIO()
 
 # There are 4 areas for touch actions
 # Each GPIO to each touch area
 touchPin_Front = 6
-touchPin_Left  = 3
-touchPin_Right = 16
-touchPin_Back  = 2
+touchPin_Left = 3
 
-# Use GPIO number but not PIN number
+INPUT_CONFIRM = 'INPUT_CONFIRM'
+INPUT_NEXT = 'INPUT_NEXT'
+
+TIMER_PERIOD = 0.05
+RELEASE_TICKS_REQUIRED = 5
+
+# Use GPIO numbers but not PIN number
 GPIO.setmode(GPIO.BCM)
 
-# Set up GPIO numbers to input
+# Set up GPIO numbers to input.
 GPIO.setup(touchPin_Front, GPIO.IN)
-GPIO.setup(touchPin_Left,  GPIO.IN)
-GPIO.setup(touchPin_Right, GPIO.IN)
-GPIO.setup(touchPin_Back,  GPIO.IN)
+GPIO.setup(touchPin_Left, GPIO.IN)
+
 
 class TouchPublisher(Node):
 
-	def __init__(self):
-		super().__init__('touch_publisher')
-		self.publisher_ = self.create_publisher(String, 'touch', 10)
-		timer_period = 1.0
-		self.timer = self.create_timer(timer_period, self.timer_callback)
+    def __init__(self):
+        super().__init__('touch_publisher')
+        if not HAS_GPIO:
+            self.get_logger().info("RPi.GPIO module not found. Using MOCK GPIO.")
+        self.publisher_ = self.create_publisher(String, 'input_event', 10)
+        self.touch_is_held = False
+        self.release_ticks = RELEASE_TICKS_REQUIRED
+        self.timer = self.create_timer(TIMER_PERIOD, self.timer_callback)
 
-	# *************************************************
-	# * Name: timer_callback(self)
-	# * Purpose: Reads GPIO pins to check touch status and publishes a 
-	# *          concatenated string of active touch locations.
-	# * @input None.
-	# * @return None.
-	# *************************************************
-	def timer_callback(self):
-		touchValue_Front = GPIO.input(touchPin_Front)
-		touchValue_Back  = GPIO.input(touchPin_Back)
-		touchValue_Left  = GPIO.input(touchPin_Left)
-		touchValue_Right = GPIO.input(touchPin_Right)
+    # *************************************************
+    # * Name: timer_callback(self)
+    # * Purpose: Reads GPIO pins to check touch status and publishes one
+    # *          clean interaction event for each new touch press.
+    # * @input None.
+    # * @return None.
+    # *************************************************
+    def timer_callback(self):
+        touch_event = self.read_touch_event()
 
-		msg = String()
-		if not touchValue_Front:
-			msg.data += ' Front'
-		if not touchValue_Back:
-			msg.data += ' Back'
-		if not touchValue_Left:
-			msg.data += ' Left'
-		if not touchValue_Right:
-			msg.data += ' Right'
-		self.publisher_.publish(msg)
+        if touch_event is None:
+            self.mark_released_tick()
+            return
+
+        if self.touch_is_held:
+            return
+
+        msg = String()
+        msg.data = touch_event
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing touch event: {msg.data}')
+
+        self.touch_is_held = True
+        self.release_ticks = 0
+
+    def read_touch_event(self):
+        active_events = []
+
+        if not GPIO.input(touchPin_Front):
+            active_events.append(INPUT_CONFIRM)
+        if not GPIO.input(touchPin_Left):
+            active_events.append(INPUT_NEXT)
+
+        if len(active_events) != 1:
+            return None
+
+        return active_events[0]
+
+    def mark_released_tick(self):
+        if self.release_ticks < RELEASE_TICKS_REQUIRED:
+            self.release_ticks += 1
+
+        if self.release_ticks >= RELEASE_TICKS_REQUIRED:
+            self.touch_is_held = False
+
+    def destroy_node(self):
+        GPIO.cleanup([touchPin_Front, touchPin_Left])
+        super().destroy_node()
 
 
 # *************************************************
@@ -92,14 +140,15 @@ class TouchPublisher(Node):
 # * @return None.
 # *************************************************
 def main(args=None):
-	rclpy.init(args=args)
+    rclpy.init(args=args)
 
-	touch_publisher = TouchPublisher()
+    touch_publisher = TouchPublisher()
 
-	rclpy.spin(touch_publisher)
-
-	touch_publisher.destroy_node()
-	rclpy.shutdown()
+    try:
+        rclpy.spin(touch_publisher)
+    finally:
+        touch_publisher.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
-	main()
+    main()

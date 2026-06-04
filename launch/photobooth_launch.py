@@ -21,13 +21,15 @@ def generate_launch_description():
 
     # Define the nodes in the photobooth system
     nodes_info = [
-        ('fsm_node', 'fsm_node'),
-        ('movement_node', 'movement_node'),
-        ('people_detection_node', 'people_detection_node'),
-        ('photo_processing_node', 'photo_processing_node'),
-        ('printer_node', 'printer_node'),
-        ('screen_node', 'screen_node'),
-        ('touch_node', 'touch_node')
+        ('fsm_node.py', 'fsm_node'),
+        ('gamepad_node.py', 'gamepad_node'),
+        ('movement_node.py', 'movement_node'),
+        ('people_detection_node.py', 'people_detection_node'),
+        ('photo_processing_node.py', 'photo_processing_node'),
+        ('printer_node.py', 'printer_node'),
+        ('screen_node.py', 'screen_node'),
+        ('touch_node.py', 'touch_node'),
+        ('speaker_node.py', 'speaker_node')
     ]
 
     for executable_name, config_key in nodes_info:
@@ -35,7 +37,7 @@ def generate_launch_description():
             launch_actions.append(Node(
                 package='photo_pupper',
                 executable=executable_name,
-                name=executable_name,
+                name=config_key,
                 output='screen'
             ))
 
