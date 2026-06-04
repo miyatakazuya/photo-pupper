@@ -10,7 +10,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
-from photo_pupper.movement_node import (
+from movement_node import (
     STAY,
     TURN_LEFT_SMALL,
     TURN_RIGHT_SMALL,
