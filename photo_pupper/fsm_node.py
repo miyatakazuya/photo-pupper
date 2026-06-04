@@ -32,25 +32,15 @@ MOVEMENT_COMPLETE = 'MOVEMENT_COMPLETE'
 
 WALK_FORWARD = 'walk_forward'
 GREETING_NOD = 'greeting_nod'
+THINKING_MOTION = 'thinking_motion'
+SPEAKING_MOTION = 'speaking_motion'
 SUCCESS_DANCE = 'success_dance'
-WELCOME_TALK_SECONDS = 6.0
-READY_TALK_SECONDS = 7.0
-READY_CONFIRMED_SECONDS = 3.0
-POSE_THINKING_SECONDS = 2.0
-POSE_SUGGESTION_SECONDS = 8.0
-COUNTDOWN_INTRO_SECONDS = 2.0
+STOP = 'stop'
 COUNTDOWN_SECONDS = 1.0
 PHOTO_CAPTURE_SECONDS = 1.5
-PHOTO_REACTION_SECONDS = 3.0
-PHOTO_REVIEW_PROMPT_SECONDS = 3.0
-OVERLAY_INTRO_SECONDS = 6.0
 OVERLAY_CONFIRM_SECONDS = 2.5
-FINAL_PREVIEW_SECONDS = 3.0
-FINAL_CONFIRMATION_PROMPT_SECONDS = 3.0
-PRINT_INTRO_SECONDS = 3.0
 PRINTING_SCREEN_SECONDS = 4.0
 PRINT_COMPLETE_SECONDS = 2.0
-GOODBYE_TALK_SECONDS = 5.0
 ERROR_RESET_SECONDS = 3.0
 
 PLACEHOLDER_CAPTURE_IMAGE = 'happy_man.png'
@@ -91,6 +81,64 @@ MOOD_THINKING_LINES = {
     'sad': "Feeling sad today? I'll try to make this one sweet.",
     'serious': 'Serious mood. Let me find something strong.',
 }
+AUDIO_LINES = {
+    'welcome': (
+        "Hi! I'm Pupper, your photo booth helper. "
+        "I'll help you choose a mood, pick a pose, take your picture, "
+        'decorate it, and print it for you.'
+    ),
+    'ready_prompt': (
+        "Before we start, make sure you're okay with me taking your "
+        'photo and printing it for this demo. If that sounds good, '
+        'choose Yes. If not, choose No.'
+    ),
+    'sensor_instructions': (
+        'Use the left and right buttons to switch options, '
+        'and press confirm to choose.'
+    ),
+    'ready_confirmed': (
+        "Alright, sounds like you're ready. "
+        "Let's start by choosing a mood for your photo."
+    ),
+    'mood_instructions': (
+        'Pick the mood you want for your photo. '
+        'Use the left and right buttons to cycle through the options, '
+        'and press confirm to choose.'
+    ),
+    'camera_ready': (
+        'Looking good. Get in view and hold that pose. '
+        'Press confirm when you are ready for the countdown.'
+    ),
+    'countdown_intro': 'Get ready for the countdown!',
+    'photo_reaction': 'That was a great shot. You make this look easy.',
+    'preview_continue': (
+        'Your photo came out great. Press confirm to continue.'
+    ),
+    'review_prompt': 'Would you like to keep that photo or retake it?',
+    'toggle_instructions': (
+        'Use the left and right buttons to toggle, and confirm to choose.'
+    ),
+    'overlay_instructions': (
+        'Great choice. Overlay selection comes next. '
+        'Use the left and right buttons to choose which overlay theme you want, '
+        'and press confirm to choose.'
+    ),
+    'apply_overlay': 'Applying your chosen decorations now.',
+    'final_preview': 'Your final picture came out amazing.',
+    'final_prompt': 'What do you think? Keep this final photo or retake it?',
+    'printing_start': "Perfect. I'm printing your photo now.",
+    'goodbye': (
+        'Your photo is ready. Go grab it from the printer beside me. '
+        'Thanks for taking pictures with me!'
+    ),
+}
+
+for mood, line in MOOD_THINKING_LINES.items():
+    AUDIO_LINES[f'think_{mood}'] = line
+
+for mood, lines in POSE_LINES.items():
+    for pose_index, line in enumerate(lines, start=1):
+        AUDIO_LINES[f'pose_{mood}_{pose_index}'] = line
 
 
 class FSMState(Enum):
@@ -281,31 +329,20 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.WELCOME
         self.show_screen('welcome_talking')
-        self.say(
-            "Hi! I'm Pupper, your photo booth helper. "
-            "I'll help you choose a mood, pick a pose, take your picture, "
-            'decorate it, and print it for you.'
-        )
-        self.send_movement(GREETING_NOD)
-        # Temporary pause until audio or TTS can tell us it finished.
-        self.state_timer = self.create_timer(
-            WELCOME_TALK_SECONDS,
-            self.enter_ready_talk
+        self.say_clip(
+            'welcome',
+            self.enter_ready_talk,
+            GREETING_NOD
         )
 
     def enter_ready_talk(self):
         self.clear_state_timer()
         self.state = FSMState.READY_TALK
         self.show_screen('ready_talking')
-        self.say(
-            "Before we start, make sure you're okay with me taking your "
-            'photo and printing it for this demo. If that sounds good, '
-            'choose Yes. If not, choose No.'
-        )
-        # Temporary pause until audio or TTS can tell us it finished.
-        self.state_timer = self.create_timer(
-            READY_TALK_SECONDS,
-            self.enter_ready
+        self.say_clip(
+            'ready_prompt',
+            self.enter_ready,
+            SPEAKING_MOTION
         )
 
     def enter_ready(self):
@@ -313,10 +350,7 @@ class PupperFSM(Node):
         self.state = FSMState.READY
         self.ready_yes_selected = True
         self.show_ready_screen()
-        self.say(
-            'Use the left and right buttons to switch options, '
-            'and press confirm to choose.'
-        )
+        self.say_clip('sensor_instructions')
 
     def confirm_ready_selection(self):
         if self.ready_yes_selected:
@@ -329,14 +363,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.READY_CONFIRMED_TALK
         self.show_screen('ready_confirmed_talking')
-        self.say(
-            "Alright, sounds like you're ready. "
-            "Let's start by choosing a mood for your photo."
-        )
-        # Temporary pause until audio or TTS can tell us it finished.
-        self.state_timer = self.create_timer(
-            READY_CONFIRMED_SECONDS,
-            self.enter_mood_selection
+        self.say_clip(
+            'ready_confirmed',
+            self.enter_mood_selection,
+            SPEAKING_MOTION
         )
 
     def enter_mood_selection(self):
@@ -344,12 +374,11 @@ class PupperFSM(Node):
         self.state = FSMState.MOOD_SELECTION
         self.selected_mood_index = 0
         self.show_mood_screen()
-        self.say(
-            'Pick the mood you want for your photo. '
-            'Use the left and right buttons to cycle through the options, '
-            'and press confirm to choose.'
+        self.say_clip(
+            'mood_instructions',
+            None,
+            SPEAKING_MOTION
         )
-        # Later this can be a animated face, blink cycle, and nod gesture.
 
     def change_mood(self, direction):
         self.selected_mood_index = (
@@ -374,11 +403,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.POSE_THINKING
         self.show_screen('pose_thinking')
-        self.say(MOOD_THINKING_LINES[self.current_mood()])
-        # Later this can follow TTS and a thinking gesture.
-        self.state_timer = self.create_timer(
-            POSE_THINKING_SECONDS,
-            self.enter_pose_suggestion
+        self.say_clip(
+            f'think_{self.current_mood()}',
+            self.enter_pose_suggestion,
+            THINKING_MOTION
         )
 
     def enter_pose_suggestion(self):
@@ -388,29 +416,26 @@ class PupperFSM(Node):
             len(POSE_LINES[self.current_mood()])
         )
         self.show_pose_screen()
-        self.say(self.current_pose_line())
-        self.state_timer = self.create_timer(
-            POSE_SUGGESTION_SECONDS,
-            self.enter_camera_ready
+        self.say_clip(
+            f'pose_{self.current_mood()}_{self.selected_pose_index + 1}',
+            self.enter_camera_ready,
+            SPEAKING_MOTION
         )
 
     def enter_camera_ready(self):
         self.clear_state_timer()
         self.state = FSMState.CAMERA_READY
+        # reframing
         self.show_screen('camera_ready')
         # Later this can switch to the DepthAI camera view.
-        self.say(
-            'Looking good. Get in view and hold that pose. '
-            'Press confirm when you are ready for the countdown.'
-        )
+        self.say_clip('camera_ready')
 
     def enter_countdown_intro(self):
         self.clear_state_timer()
         self.state = FSMState.COUNTDOWN_INTRO
         self.show_screen('countdown_intro')
-        self.say('Get ready for the countdown!')
-        self.state_timer = self.create_timer(
-            COUNTDOWN_INTRO_SECONDS,
+        self.say_clip(
+            'countdown_intro',
             self.enter_countdown
         )
 
@@ -457,10 +482,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_REACTION
         self.show_screen('photo_reaction')
-        self.say('That was a great shot. You make this look easy.')
-        self.state_timer = self.create_timer(
-            PHOTO_REACTION_SECONDS,
-            self.enter_photo_preview_ready
+        self.say_clip(
+            'photo_reaction',
+            self.enter_photo_preview_ready,
+            SPEAKING_MOTION
         )
 
     def enter_photo_preview_ready(self):
@@ -468,17 +493,17 @@ class PupperFSM(Node):
         self.state = FSMState.PHOTO_PREVIEW_READY
         self.show_screen('photo_preview')
         # Later this should show the real captured photo.
-        self.say('Your photo came out great. Press confirm to continue.')
+        self.say_clip('preview_continue')
 
     def enter_photo_review_prompt(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_REVIEW_PROMPT
         self.show_screen('photo_preview')
         # Later this should keep showing the real captured photo.
-        self.say('Would you like to keep that photo or retake it?')
-        self.state_timer = self.create_timer(
-            PHOTO_REVIEW_PROMPT_SECONDS,
-            self.enter_photo_review_choice
+        self.say_clip(
+            'review_prompt',
+            self.enter_photo_review_choice,
+            SPEAKING_MOTION
         )
 
     def enter_photo_review_choice(self):
@@ -486,7 +511,7 @@ class PupperFSM(Node):
         self.state = FSMState.PHOTO_REVIEW_CHOICE
         self.keep_photo_selected = True
         self.show_photo_review_screen()
-        self.say('Use the left and right buttons to toggle, and confirm to choose.')
+        self.say_clip('toggle_instructions')
 
     def confirm_photo_review_choice(self):
         if self.keep_photo_selected:
@@ -499,15 +524,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.OVERLAY_INTRO
         self.show_screen('overlay_intro_talking')
-        self.say(
-            'Great choice. Overlay selection comes next. '
-            'Use the left and right buttons to choose which overlay theme you want, '
-            'and press confirm to choose.'
-        )
-        # Later this can follow TTS and a speaking gesture.
-        self.state_timer = self.create_timer(
-            OVERLAY_INTRO_SECONDS,
-            self.enter_overlay_selection
+        self.say_clip(
+            'overlay_instructions',
+            self.enter_overlay_selection,
+            SPEAKING_MOTION
         )
 
     def enter_overlay_selection(self):
@@ -537,7 +557,7 @@ class PupperFSM(Node):
         self.state = FSMState.OVERLAY_CONFIRM_CHOICE
         self.overlay_confirm_yes_selected = True
         self.show_overlay_confirmation_screen()
-        self.say('Use the left and right buttons to choose, and confirm to choose.')
+        self.say_clip('toggle_instructions')
 
     def confirm_overlay_choice(self):
         if self.overlay_confirm_yes_selected:
@@ -550,6 +570,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.APPLY_OVERLAY
         self.show_screen('apply_overlay')
+        self.say_clip('apply_overlay')
 
         if not self.photo_processing_client.service_is_ready():
             self.enter_error_reset('Sorry, photo processing is not ready. Resetting.')
@@ -591,10 +612,10 @@ class PupperFSM(Node):
         self.state = FSMState.FINAL_PREVIEW
         self.show_screen('final_preview')
         # Later this should show the real processed photo.
-        self.say('Your final picture came out amazing.')
-        self.state_timer = self.create_timer(
-            FINAL_PREVIEW_SECONDS,
-            self.enter_final_confirmation_prompt
+        self.say_clip(
+            'final_preview',
+            self.enter_final_confirmation_prompt,
+            SPEAKING_MOTION
         )
 
     def enter_final_confirmation_prompt(self):
@@ -602,10 +623,10 @@ class PupperFSM(Node):
         self.state = FSMState.FINAL_CONFIRMATION_PROMPT
         self.show_screen('final_preview')
         # Later this should keep showing the real processed photo.
-        self.say('What do you think? Keep this final photo or retake it?')
-        self.state_timer = self.create_timer(
-            FINAL_CONFIRMATION_PROMPT_SECONDS,
-            self.enter_final_confirmation
+        self.say_clip(
+            'final_prompt',
+            self.enter_final_confirmation,
+            SPEAKING_MOTION
         )
 
     def enter_final_confirmation(self):
@@ -613,7 +634,7 @@ class PupperFSM(Node):
         self.state = FSMState.FINAL_CONFIRMATION
         self.final_keep_selected = True
         self.show_final_confirmation_screen()
-        self.say('Use the left and right buttons to toggle, and confirm to choose.')
+        self.say_clip('toggle_instructions')
 
     def confirm_final_choice(self):
         if self.final_keep_selected:
@@ -626,11 +647,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PRINT_INTRO_TALK
         self.show_screen('printing_talking')
-        self.say("Perfect. I'm printing your photo now.")
-        # Later this can follow TTS and a speaking gesture.
-        self.state_timer = self.create_timer(
-            PRINT_INTRO_SECONDS,
-            self.enter_printing
+        self.say_clip(
+            'printing_start',
+            self.enter_printing,
+            SPEAKING_MOTION
         )
 
     def enter_printing(self):
@@ -713,14 +733,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.GOODBYE_TALK
         self.show_screen('goodbye_talking')
-        self.say(
-            'Your photo is ready. Go grab it from the printer beside me. '
-            'Thanks for taking pictures with me!'
-        )
-        # Later this can follow TTS and a speaking gesture.
-        self.state_timer = self.create_timer(
-            GOODBYE_TALK_SECONDS,
-            self.enter_goodbye_dance
+        self.say_clip(
+            'goodbye',
+            self.enter_goodbye_dance,
+            SPEAKING_MOTION
         )
 
     def enter_goodbye_dance(self):
@@ -808,62 +824,76 @@ class PupperFSM(Node):
         self.movement_publisher.publish(msg)
         self.get_logger().info(f'Movement command: {movement_command}')
 
-    def play_sound(self, sound_path):
+    def play_sound(self, sound_path, next_callback=None,
+                   movement_command=None, expected_state=None):
         if not self.play_sound_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().warn("PlaySound service not available")
-            return
+            self.get_logger().warn('PlaySound service not available')
+            return False
+
         req = PlaySound.Request()
         req.sound_path = sound_path
-        self.get_logger().info(f"Calling PlaySound service with: {sound_path}")
-        self.play_sound_client.call_async(req)
+
+        self.get_logger().info(f'Calling PlaySound service with: {sound_path}')
+        future = self.play_sound_client.call_async(req)
+
+        if next_callback is not None or movement_command is not None:
+            future.add_done_callback(
+                lambda done_future: self.handle_sound_response(
+                    done_future,
+                    expected_state,
+                    next_callback,
+                    movement_command
+                )
+            )
+
+        return True
 
     def say(self, text):
+        # Replace this with TTS when the speech node is ready.
         self.get_logger().info(f'[Pupper says] {text}')
 
-        phrases_map = {
-            "Hi! I'm Pupper, your photo booth helper. I'll help you choose a mood, pick a pose, take your picture, decorate it, and print it for you.": "welcome",
-            "Before we start, make sure you're okay with me taking your photo and printing it for this demo. If that sounds good, choose Yes. If not, choose No.": "ready_prompt",
-            "Use the left and right buttons to switch options, and press confirm to choose.": "sensor_instructions",
-            "Alright, sounds like you're ready. Let's start by choosing a mood for your photo.": "ready_confirmed",
-            "Pick the mood you want for your photo. Use the left and right buttons to cycle through the options, and press confirm to choose.": "mood_instructions",
-            "Looking good. Get in view and hold that pose. Press confirm when you are ready for the countdown.": "camera_ready",
-            "Get ready for the countdown!": "countdown_intro",
-            "That was a great shot. You make this look easy.": "photo_reaction",
-            "Your photo came out great. Press confirm to continue.": "preview_continue",
-            "Would you like to keep that photo or retake it?": "review_prompt",
-            "Use the left and right buttons to toggle, and confirm to choose.": "toggle_instructions",
-            "Use the left and right buttons to choose, and confirm to choose.": "toggle_instructions",
-            "Great choice. Overlay selection comes next. Use the left and right buttons to choose which overlay theme you want, and press confirm to choose.": "overlay_instructions",
-            "Applying your chosen decorations now.": "apply_overlay",
-            "Your final picture came out amazing.": "final_preview",
-            "What do you think? Keep this final photo or retake it?": "final_prompt",
-            "Perfect. I'm printing your photo now.": "printing_start",
-            "Your photo is ready. Go grab it from the printer beside me. Thanks for taking pictures with me!": "goodbye",
-            "Hmm, you're feeling happy today. Let me think...": "think_happy",
-            "Silly mood? I like it. Let me think...": "think_silly",
-            "Feeling sad today? I'll try to make this one sweet.": "think_sad",
-            "Serious mood. Let me find something strong.": "think_serious",
-            "Try a double bicep flex.": "pose_happy_1",
-            "Try making heart hands.": "pose_happy_2",
-            "Give me a big smile and thumbs up.": "pose_happy_3",
-            "Do the dab.": "pose_silly_1",
-            "Try funny hand motion on your head": "pose_silly_2",
-            "Give me a peace sign!": "pose_silly_3",
-            "Try a fake crying pose.": "pose_sad_1",
-            "Curl up in your chair and hug your legs like you are really sad.": "pose_sad_2",
-            "Look down dramatically.": "pose_sad_3",
-            "Cross your arms like a boss.": "pose_serious_1",
-            "Stand strong and pose like superman!": "pose_serious_2",
-            "Try a thinker pose.": "pose_serious_3"
-        }
+    def say_clip(self, clip_name, next_callback=None, movement_command=None):
+        self.say(AUDIO_LINES.get(clip_name, clip_name))
 
-        clean_text = text.strip()
-        filename = phrases_map.get(clean_text)
-        if filename:
-            sound_file = self.audio_dir / f"{filename}.wav"
-            self.play_sound(str(sound_file))
+        if movement_command is not None:
+            self.send_movement(movement_command)
+
+        expected_state = self.state
+        sound_file = self.audio_dir / f'{clip_name}.wav'
+        sound_started = self.play_sound(
+            str(sound_file),
+            next_callback,
+            movement_command,
+            expected_state
+        )
+
+        if sound_started:
+            return
+
+        if movement_command is not None:
+            self.send_movement(STOP)
+
+        if next_callback is not None:
+            next_callback()
+
+    def handle_sound_response(self, future, expected_state,
+                              next_callback, movement_command):
+        if self.state != expected_state:
+            return
+
+        try:
+            response = future.result()
+        except Exception as error:
+            self.get_logger().warn(f'PlaySound failed: {error}')
         else:
-            self.get_logger().info(f"No direct audio file match found for: '{clean_text}'")
+            if not response.success:
+                self.get_logger().warn(response.message)
+
+        if movement_command is not None:
+            self.send_movement(STOP)
+
+        if next_callback is not None:
+            next_callback()
 
     def clear_state_timer(self):
         if self.state_timer is not None:
