@@ -30,180 +30,7 @@ STAY = 'stay'
 
 MOVEMENT_COMPLETE = "MOVEMENT_COMPLETE"
 
-LINEAR_SPEED = 0.05
-SIDE_SPEED = 0.04
-TURN_SPEED = 0.25
-STEP_SECONDS = 0.4
-POSE_SECONDS = 0.4
 
-PRIMITIVE_MOVES = {
-    "walk_forward_long": {
-        "kind": "velocity",
-        "duration": 3.0,
-        "linear_x": LINEAR_SPEED,
-        "linear_y": 0.0,
-        "angular_z": 0.0,
-    },
-    STEP_FORWARD_SMALL: {
-        "kind": "velocity",
-        "duration": STEP_SECONDS,
-        "linear_x": LINEAR_SPEED,
-        "linear_y": 0.0,
-        "angular_z": 0.0,
-    },
-    STEP_BACKWARD_SMALL: {
-        "kind": "velocity",
-        "duration": STEP_SECONDS,
-        "linear_x": -LINEAR_SPEED,
-        "linear_y": 0.0,
-        "angular_z": 0.0,
-    },
-    STEP_LEFT_SMALL: {
-        "kind": "velocity",
-        "duration": STEP_SECONDS,
-        "linear_x": 0.0,
-        "linear_y": SIDE_SPEED,
-        "angular_z": 0.0,
-    },
-    STEP_RIGHT_SMALL: {
-        "kind": "velocity",
-        "duration": STEP_SECONDS,
-        "linear_x": 0.0,
-        "linear_y": -SIDE_SPEED,
-        "angular_z": 0.0,
-    },
-    TURN_LEFT_SMALL: {
-        "kind": "velocity",
-        "duration": STEP_SECONDS,
-        "linear_x": 0.0,
-        "linear_y": 0.0,
-        "angular_z": TURN_SPEED,
-    },
-    TURN_RIGHT_SMALL: {
-        "kind": "velocity",
-        "duration": STEP_SECONDS,
-        "linear_x": 0.0,
-        "linear_y": 0.0,
-        "angular_z": -TURN_SPEED,
-    },
-     STEP_FORWARD: {
-        'kind': 'velocity',
-        'duration': STEP_SECONDS,
-        'linear_x': 0.15,
-        'linear_y': 0.0,
-        'angular_z': 0.0,
-    },
-    STEP_BACKWARD: {
-        'kind': 'velocity',
-        'duration': STEP_SECONDS,
-        'linear_x': -0.15,
-        'linear_y': 0.0,
-        'angular_z': 0.0,
-    },
-    STEP_LEFT: {
-        'kind': 'velocity',
-        'duration': STEP_SECONDS,
-        'linear_x': 0.0,
-        'linear_y': 0.12,
-        'angular_z': 0.0,
-    },
-    STEP_RIGHT: {
-        'kind': 'velocity',
-        'duration': STEP_SECONDS,
-        'linear_x': 0.0,
-        'linear_y': -0.12,
-        'angular_z': 0.0,
-    },
-    'look_up': {
-        'kind': 'pose',
-        'duration': POSE_SECONDS,
-        'roll': 0.0,
-        'pitch': -0.2,
-        'yaw': 0.0,
-    },
-    'look_up_fast': {
-        'kind': 'pose',
-        'duration': POSE_SECONDS,
-        'roll': 0.0,
-        'pitch': -0.3,
-        'yaw': 0.0,
-    },
-    'look_up_slow': {
-        'kind': 'pose',
-        'duration': 0.8,
-        'roll': 0.0,
-        'pitch': -0.2,
-        'yaw': 0.0,
-    },
-    'look_down': {
-        'kind': 'pose',
-        'duration': POSE_SECONDS,
-        'roll': 0.0,
-        'pitch': 0.2,
-        'yaw': 0.0,
-    },
-    'look_down_fast': {
-        'kind': 'pose',
-        'duration': 0.2,
-        'roll': 0.0,
-        'pitch': 0.2,
-        'yaw': 0.0,
-    },
-    'look_down_slow': {
-        'kind': 'pose',
-        'duration': 0.8,
-        'roll': 0.0,
-        'pitch': 0.2,
-        'yaw': 0.0,
-    },
-    'look_left': {
-        'kind': 'pose',
-        'duration': POSE_SECONDS,
-        'roll': 0.0,
-        'pitch': 0.0,
-        'yaw': 0.2,
-    },
-     'look_left_slow': {
-        'kind': 'pose',
-        'duration': 0.8,
-        'roll': 0.0,
-        'pitch': 0.0,
-        'yaw': 0.2,
-    },
-    'look_right': {
-        'kind': 'pose',
-        'duration': POSE_SECONDS,
-        'roll': 0.0,
-        'pitch': 0.0,
-        'yaw': -0.2,
-    },
-    'look_right_slow': {
-        'kind': 'pose',
-        'duration': 0.8,
-        'roll': 0.0,
-        'pitch': 0.0,
-        'yaw': -0.2,
-    },
-    LOOK_MIDDLE: {
-        "kind": "pose",
-        "duration": POSE_SECONDS,
-        "roll": 0.0,
-        "pitch": 0.0,
-        "yaw": 0.0,
-    },
-    "pause_short": {
-        "kind": "pause",
-        "duration": 0.2,
-    },
-    "pause_medium": {
-        "kind": "pause",
-        "duration": 0.6,
-    },
-    'pause_long': {
-        'kind': 'pause',
-        'duration': 1.5,
-    },
-}
 
 MOVEMENT_SEQUENCES = {
     WALK_FORWARD: ['walk_forward_long'],
@@ -286,6 +113,196 @@ class MovementNode(Node):
             from rclpy.logging import LoggingSeverity
             self.get_logger().set_level(LoggingSeverity.WARN)
 
+        self.declare_parameter('linear_speed', 0.05)
+        self.linear_speed = (
+            self.get_parameter("linear_speed").get_parameter_value().double_value
+        )
+        self.declare_parameter('side_speed', 0.04)
+        self.side_speed = (
+            self.get_parameter("side_speed").get_parameter_value().double_value
+        )
+        self.declare_parameter('turn_speed', 0.25)
+        self.turn_speed = (
+            self.get_parameter("turn_speed").get_parameter_value().double_value
+        )
+        self.declare_parameter('step_seconds', 0.4)
+        self.step_seconds = (
+            self.get_parameter("step_seconds").get_parameter_value().double_value
+        )
+        self.declare_parameter('pose_seconds', 0.4)
+        self.pose_seconds = (
+            self.get_parameter("pose_seconds").get_parameter_value().double_value
+        )
+
+        self.primitive_moves = {
+            "walk_forward_long": {
+                "kind": "velocity",
+                "duration": 3.0,
+                "linear_x": self.linear_speed,
+                "linear_y": 0.0,
+                "angular_z": 0.0,
+            },
+            STEP_FORWARD_SMALL: {
+                "kind": "velocity",
+                "duration": self.step_seconds,
+                "linear_x": self.linear_speed,
+                "linear_y": 0.0,
+                "angular_z": 0.0,
+            },
+            STEP_BACKWARD_SMALL: {
+                "kind": "velocity",
+                "duration": self.step_seconds,
+                "linear_x": -self.linear_speed,
+                "linear_y": 0.0,
+                "angular_z": 0.0,
+            },
+            STEP_LEFT_SMALL: {
+                "kind": "velocity",
+                "duration": self.step_seconds,
+                "linear_x": 0.0,
+                "linear_y": self.side_speed,
+                "angular_z": 0.0,
+            },
+            STEP_RIGHT_SMALL: {
+                "kind": "velocity",
+                "duration": self.step_seconds,
+                "linear_x": 0.0,
+                "linear_y": -self.side_speed,
+                "angular_z": 0.0,
+            },
+            TURN_LEFT_SMALL: {
+                "kind": "velocity",
+                "duration": self.step_seconds,
+                "linear_x": 0.0,
+                "linear_y": 0.0,
+                "angular_z": self.turn_speed,
+            },
+            TURN_RIGHT_SMALL: {
+                "kind": "velocity",
+                "duration": self.step_seconds,
+                "linear_x": 0.0,
+                "linear_y": 0.0,
+                "angular_z": -self.turn_speed,
+            },
+            STEP_FORWARD: {
+                'kind': 'velocity',
+                'duration': self.step_seconds,
+                'linear_x': 0.15,
+                'linear_y': 0.0,
+                'angular_z': 0.0,
+            },
+            STEP_BACKWARD: {
+                'kind': 'velocity',
+                'duration': self.step_seconds,
+                'linear_x': -0.15,
+                'linear_y': 0.0,
+                'angular_z': 0.0,
+            },
+            STEP_LEFT: {
+                'kind': 'velocity',
+                'duration': self.step_seconds,
+                'linear_x': 0.0,
+                'linear_y': 0.12,
+                'angular_z': 0.0,
+            },
+            STEP_RIGHT: {
+                'kind': 'velocity',
+                'duration': self.step_seconds,
+                'linear_x': 0.0,
+                'linear_y': -0.12,
+                'angular_z': 0.0,
+            },
+            'look_up': {
+                'kind': 'pose',
+                'duration': self.pose_seconds,
+                'roll': 0.0,
+                'pitch': -0.2,
+                'yaw': 0.0,
+            },
+            'look_up_fast': {
+                'kind': 'pose',
+                'duration': self.pose_seconds,
+                'roll': 0.0,
+                'pitch': -0.3,
+                'yaw': 0.0,
+            },
+            'look_up_slow': {
+                'kind': 'pose',
+                'duration': 0.8,
+                'roll': 0.0,
+                'pitch': -0.2,
+                'yaw': 0.0,
+            },
+            'look_down': {
+                'kind': 'pose',
+                'duration': self.pose_seconds,
+                'roll': 0.0,
+                'pitch': 0.2,
+                'yaw': 0.0,
+            },
+            'look_down_fast': {
+                'kind': 'pose',
+                'duration': 0.2,
+                'roll': 0.0,
+                'pitch': 0.2,
+                'yaw': 0.0,
+            },
+            'look_down_slow': {
+                'kind': 'pose',
+                'duration': 0.8,
+                'roll': 0.0,
+                'pitch': 0.2,
+                'yaw': 0.0,
+            },
+            'look_left': {
+                'kind': 'pose',
+                'duration': self.pose_seconds,
+                'roll': 0.0,
+                'pitch': 0.0,
+                'yaw': 0.2,
+            },
+            'look_left_slow': {
+                'kind': 'pose',
+                'duration': 0.8,
+                'roll': 0.0,
+                'pitch': 0.0,
+                'yaw': 0.2,
+            },
+            'look_right': {
+                'kind': 'pose',
+                'duration': self.pose_seconds,
+                'roll': 0.0,
+                'pitch': 0.0,
+                'yaw': -0.2,
+            },
+            'look_right_slow': {
+                'kind': 'pose',
+                'duration': 0.8,
+                'roll': 0.0,
+                'pitch': 0.0,
+                'yaw': -0.2,
+            },
+            LOOK_MIDDLE: {
+                "kind": "pose",
+                "duration": self.pose_seconds,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw": 0.0,
+            },
+            "pause_short": {
+                "kind": "pause",
+                "duration": 0.2,
+            },
+            "pause_medium": {
+                "kind": "pause",
+                "duration": 0.6,
+            },
+            'pause_long': {
+                'kind': 'pause',
+                'duration': 1.5,
+            },
+        }
+
         self.event_publisher = self.create_publisher(String, "movement_event", 10)
         self.velocity_publisher = self.create_publisher(Twist, "cmd_vel", 10)
         self.pose_publisher = self.create_publisher(Pose, "reference_body_pose", 10)
@@ -340,7 +357,7 @@ class MovementNode(Node):
         sequence = []
 
         for primitive_name in primitive_names:
-            primitive = dict(PRIMITIVE_MOVES[primitive_name])
+            primitive = dict(self.primitive_moves[primitive_name])
             primitive["name"] = primitive_name
             sequence.append(primitive)
 

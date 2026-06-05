@@ -6,7 +6,12 @@ photobooth_nodes:
     enabled: 1
     parameters:
       real_movement: true
-      enable_logging: false
+      enable_logging: true
+      linear_speed: 0.05
+      side_speed: 0.04
+      turn_speed: 0.25
+      step_seconds: 0.4
+      pose_seconds: 0.4
   camera_node:
     enabled: 1
     parameters:
