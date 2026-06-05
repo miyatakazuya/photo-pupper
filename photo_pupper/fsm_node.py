@@ -22,6 +22,7 @@ from ament_index_python.packages import get_package_share_directory
 from photo_pupper.srv import PlaySound, PrintImage, ProcessPhoto, SaveImage
 from rclpy.node import Node
 from std_msgs.msg import String
+from std_srvs.srv import SetBool
 
 
 INPUT_CONFIRM = 'INPUT_CONFIRM'
@@ -116,8 +117,8 @@ AUDIO_LINES = {
         'choose Yes. If not, choose No.'
     ),
     'sensor_instructions': (
-        'Use the left and right buttons to switch options, '
-        'and press confirm to choose.'
+        'Use button L or R to switch options, '
+        'and press A to confirm.'
     ),
     'ready_confirmed': (
         "Alright, sounds like you're ready. "
@@ -125,26 +126,26 @@ AUDIO_LINES = {
     ),
     'mood_instructions': (
         'Pick the mood you want for your photo. '
-        'Use the left and right buttons to cycle through the options, '
-        'and press confirm to choose.'
+        'Use button L or R to cycle through the options, '
+        'and press A to confirm.'
     ),
     'camera_ready': (
         'Looking good. Get in view and hold that pose. '
-        'Press confirm when you are ready for the countdown.'
+        'Press A to confirm when you are ready for the countdown.'
     ),
     'countdown_intro': 'Get ready for the countdown!',
     'photo_reaction': 'That was a great shot. You make this look easy.',
     'preview_continue': (
-        'Your photo came out great. Press confirm to continue.'
+        'Your photo came out great. Press A to confirm.'
     ),
     'review_prompt': 'Would you like to keep that photo or retake it?',
     'toggle_instructions': (
-        'Use the left and right buttons to toggle, and confirm to choose.'
+        'Use button L or R to toggle, and press A to confirm.'
     ),
     'overlay_instructions': (
         'Great choice. Overlay selection comes next. '
-        'Use the left and right buttons to choose which overlay theme you want, '
-        'and press confirm to choose.'
+        'Use button L or R to choose which overlay theme you want, '
+        'and press A to confirm.'
     ),
     'apply_overlay': 'Applying your chosen decorations now.',
     'final_preview': 'Your final picture came out amazing.',
@@ -246,6 +247,10 @@ class PupperFSM(Node):
         self.save_image_client = self.create_client(
             SaveImage,
             'save_image'
+        )
+        self.toggle_tracking_client = self.create_client(
+            SetBool,
+            'toggle_tracking'
         )
 
         self.play_sound_client = self.create_client(PlaySound, 'play_sound')
@@ -350,6 +355,7 @@ class PupperFSM(Node):
     def enter_idle(self):
         self.clear_state_timer()
         self.state = FSMState.IDLE
+        self.set_tracking_enabled(True)
         self.ready_yes_selected = True
         self.selected_mood_index = 0
         self.selected_pose_index = 0
@@ -370,6 +376,7 @@ class PupperFSM(Node):
         self.state = FSMState.REVEAL
         self.show_screen('reveal')
         # Keep camera reframing disabled during the reveal walk
+        self.set_tracking_enabled(False)
         self.send_movement(WALK_FORWARD)
 
     def enter_startup_effect(self):
@@ -383,6 +390,7 @@ class PupperFSM(Node):
         self.state = FSMState.INITIAL_CENTERING
         self.show_screen('reframing')
         # disable camera reframing before this neutral pose
+        self.set_tracking_enabled(False)
         self.send_movement(LOOK_MIDDLE)
 
     def enter_initial_reframing(self):
@@ -390,6 +398,7 @@ class PupperFSM(Node):
         self.state = FSMState.INITIAL_REFRAMING
         self.show_screen('reframing')
         # enable reframing here and replace this timer with completion
+        self.set_tracking_enabled(True)
         self.state_timer = self.create_timer(
             REFRAMING_SECONDS,
             self.complete_initial_reframing
@@ -398,6 +407,7 @@ class PupperFSM(Node):
     def complete_initial_reframing(self):
         self.clear_state_timer()
         # disable reframing before the greeting movement begins
+        self.set_tracking_enabled(False)
         self.enter_welcome()
 
     def enter_welcome(self):
@@ -541,6 +551,7 @@ class PupperFSM(Node):
         self.state = FSMState.PHOTO_CENTERING
         self.show_screen('reframing')
         # disable camera reframing before this
+        self.set_tracking_enabled(False)
         self.send_movement(LOOK_MIDDLE)
 
     def enter_photo_reframing(self):
@@ -548,6 +559,7 @@ class PupperFSM(Node):
         self.state = FSMState.PHOTO_REFRAMING
         self.show_screen('reframing')
         # enable reframing here and replace this timer with when reframing is done
+        self.set_tracking_enabled(True)
         self.state_timer = self.create_timer(
             REFRAMING_SECONDS,
             self.complete_photo_reframing
@@ -556,6 +568,7 @@ class PupperFSM(Node):
     def complete_photo_reframing(self):
         self.clear_state_timer()
         # disable reframing, then switch the LCD to the camera view
+        self.set_tracking_enabled(False)
         self.enter_camera_ready()
 
     def enter_camera_ready(self):
@@ -652,6 +665,7 @@ class PupperFSM(Node):
 
     def enter_photo_reaction(self):
         self.clear_state_timer()
+        self.set_tracking_enabled(True)
         self.state = FSMState.PHOTO_REACTION
         self.show_screen('photo_reaction')
         self.say_clip(
@@ -1088,6 +1102,27 @@ class PupperFSM(Node):
             self.state_timer.cancel()
             self.destroy_timer(self.state_timer)
             self.state_timer = None
+
+    def set_tracking_enabled(self, enable):
+        if not self.toggle_tracking_client.service_is_ready():
+            self.toggle_tracking_client.wait_for_service(timeout_sec=0.5)
+
+        if not self.toggle_tracking_client.service_is_ready():
+            self.get_logger().warn('toggle_tracking service not ready')
+            return
+
+        request = SetBool.Request()
+        request.data = enable
+        future = self.toggle_tracking_client.call_async(request)
+        future.add_done_callback(self.handle_toggle_tracking_response)
+        self.get_logger().info(f"Requesting tracking toggle to {enable}...")
+
+    def handle_toggle_tracking_response(self, future):
+        try:
+            response = future.result()
+            self.get_logger().info(f"Toggle tracking response: {response.message}")
+        except Exception as error:
+            self.get_logger().error(f"Toggle tracking call failed: {error}")
 
 
 def main(args=None):

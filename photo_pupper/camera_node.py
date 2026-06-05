@@ -9,6 +9,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
+from std_srvs.srv import SetBool
 from photo_pupper.srv import SaveImage
 from movement_node import (
     STAY,
@@ -47,6 +48,14 @@ class CameraNode(Node):
 
         # Publisher to send movement commands to movement_node
         self.movement_publisher = self.create_publisher(String, "movement_command", 10)
+
+        # tracking enabled flag
+        self.tracking_enabled = True
+
+        # Service server to enable/disable user tracking
+        self.toggle_tracking_srv = self.create_service(
+            SetBool, "toggle_tracking", self.toggle_tracking_callback
+        )
 
         # Service server to save current camera image
         self.save_image_srv = self.create_service(
@@ -138,44 +147,45 @@ class CameraNode(Node):
         # --- Everything below here is standard frame processing ---
         frame = imgFrame.getCvFrame()
         self.latest_frame = frame
-        trackletsData = track.tracklets
+        if self.tracking_enabled:
+            trackletsData = track.tracklets
 
-        move = STAY
-        for t in trackletsData:
-            roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
-            x1, y1 = int(roi.topLeft().x), int(roi.topLeft().y)
-            x2, y2 = int(roi.bottomRight().x), int(roi.bottomRight().y)
+            move = STAY
+            for t in trackletsData:
+                roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
+                x1, y1 = int(roi.topLeft().x), int(roi.topLeft().y)
+                x2, y2 = int(roi.bottomRight().x), int(roi.bottomRight().y)
 
-            try:
-                label = self.labelMap[t.label]
-            except (IndexError, KeyError, TypeError):
-                label = t.label
+                try:
+                    label = self.labelMap[t.label]
+                except (IndexError, KeyError, TypeError):
+                    label = t.label
 
-            # if a person and not in center, tell to move left or right
-            if label == "person":
-                center = (x1 + x2) / 2, (y1 + y2) / 2
+                # if a person and not in center, tell to move left or right
+                if label == "person":
+                    center = (x1 + x2) / 2, (y1 + y2) / 2
 
-                # Calculate how much of the screen height the person occupies
-                person_height = y2 - y1
-                frame_height = frame.shape[0]
-                height_ratio = person_height / frame_height
+                    # Calculate how much of the screen height the person occupies
+                    person_height = y2 - y1
+                    frame_height = frame.shape[0]
+                    height_ratio = person_height / frame_height
 
-                # if person is not within 10% of center, tell to move left or right
-                if (
-                    abs(center[0] - frame.shape[1] / 2)
-                    > frame.shape[1] * self.turn_threshold
-                ):
-                    if center[0] < frame.shape[1] / 2:
-                        move = TURN_LEFT_SMALL
-                    else:
-                        move = TURN_RIGHT_SMALL
-                elif height_ratio < 0.25:
-                    move = STEP_FORWARD_SMALL
-                elif height_ratio > 0.9:
-                    move = STEP_BACKWARD_SMALL
-                break
+                    # if person is not within 10% of center, tell to move left or right
+                    if (
+                        abs(center[0] - frame.shape[1] / 2)
+                        > frame.shape[1] * self.turn_threshold
+                    ):
+                        if center[0] < frame.shape[1] / 2:
+                            move = TURN_LEFT_SMALL
+                        else:
+                            move = TURN_RIGHT_SMALL
+                    elif height_ratio < 0.25:
+                        move = STEP_FORWARD_SMALL
+                    elif height_ratio > 0.9:
+                        move = STEP_BACKWARD_SMALL
+                    break
 
-        self.send_move_request(move)
+            self.send_move_request(move)
 
         if self.publishing:
             # In-Memory JPEG Compression
@@ -217,6 +227,13 @@ class CameraNode(Node):
             response.success = False
             response.message = f"Failed to save image: {str(e)}"
             self.get_logger().error(response.message)
+        return response
+
+    def toggle_tracking_callback(self, request, response):
+        self.tracking_enabled = request.data
+        response.success = True
+        response.message = f"Tracking {'enabled' if self.tracking_enabled else 'disabled'}."
+        self.get_logger().info(response.message)
         return response
 
 
