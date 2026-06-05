@@ -4,59 +4,47 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+
 def generate_launch_description():
+    pkg_share = get_package_share_directory("photo_pupper")
+    node_config_path = os.path.join(pkg_share, "config", "node_config.yml")
     
-    pkg_share = get_package_share_directory('photo_pupper')
-    
-    node_config_path = os.path.join(pkg_share, 'config', 'node_config.yml')
     try:
-        with open(node_config_path, 'r') as f:
+        with open(node_config_path, "r") as f:
             config = yaml.safe_load(f)
-            nodes_to_run = config['photobooth_nodes']
+            nodes_to_run = config.get("photobooth_nodes", {})
     except Exception as e:
         print(f"ERROR loading node_config: {e}")
         return LaunchDescription()
 
     launch_actions = []
 
-    # Define the nodes in the photobooth system
-    nodes_info = [
-        ('fsm_node.py', 'fsm_node'),
-        ('gamepad_node.py', 'gamepad_node'),
-        ('movement_node.py', 'movement_node'),
-        ('camera_node.py', 'camera_node'),
-        ('photo_processing_node.py', 'photo_processing_node'),
-        ('printer_node.py', 'printer_node'),
-        ('screen_node.py', 'screen_node'),
-        ('touch_node.py', 'touch_node'),
-        ('speaker_node.py', 'speaker_node')
-    ]
+    for node_name, node_cfg in nodes_to_run.items():
+        enabled = 1
+        pkg = "photo_pupper"
+        executable = f"{node_name}.py"
+        node_params = []
 
-    for executable_name, config_key in nodes_info:
-        if nodes_to_run.get(config_key, 1):
-            launch_actions.append(Node(
-                package='photo_pupper',
-                executable=executable_name,
-                name=config_key,
-                output='screen'
-            ))
+        # Parse node configuration which can be a simple active toggle (0/1) or a dictionary
+        if isinstance(node_cfg, dict):
+            enabled = node_cfg.get("enabled", 1)
+            pkg = node_cfg.get("package", pkg)
+            executable = node_cfg.get("executable", executable)
+            params_dict = node_cfg.get("parameters", {})
+            if params_dict:
+                node_params.append(params_dict)
+        else:
+            enabled = node_cfg
 
-    launch_actions.append(Node(
-        package='mini_pupper_dance',
-        executable='pose_controller',
-        name='pose_controller',
-        output='screen'
-    ))
-
-    launch_actions.append(Node(
-        package='joy',
-        executable='joy_node',
-        name='joy_node',
-        parameters=[{
-            'device_id': 0,
-            'autorepeat_rate': 20.0
-        }],
-        output='screen'
-    ))
+        if enabled:
+            launch_actions.append(
+                Node(
+                    package=pkg,
+                    executable=executable,
+                    name=node_name,
+                    parameters=node_params if node_params else None,
+                    output="screen",
+                )
+            )
 
     return LaunchDescription(launch_actions)

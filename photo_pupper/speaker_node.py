@@ -13,15 +13,19 @@ class SpeakerNode(Node):
     def __init__(self):
         super().__init__('speaker_node')
 
-        os.system("amixer -c 2 sset Master 80% unmute > /dev/null 2>&1")
-        os.system("amixer -c 2 sset PCM 80% unmute > /dev/null 2>&1")
-        os.system("amixer -c 2 sset Speaker 80% unmute > /dev/null 2>&1")
+        # Declare volume parameter defaulting to 50%
+        self.declare_parameter('volume_percent', 50)
+        volume = self.get_parameter('volume_percent').get_parameter_value().integer_value
+
+        os.system(f"amixer -c 2 sset Master {volume}% unmute > /dev/null 2>&1")
+        os.system(f"amixer -c 2 sset PCM {volume}% unmute > /dev/null 2>&1")
+        os.system(f"amixer -c 2 sset Speaker {volume}% unmute > /dev/null 2>&1")
 
         sd.default.device = 1
 
         # Create the service server
         self.srv = self.create_service(PlaySound, 'play_sound', self.play_sound_callback)
-        self.get_logger().info("Speaker Node loaded")
+        self.get_logger().info(f"Speaker Node loaded (volume: {volume}%)")
 
     def play_sound_callback(self, request, response):
         target_path = request.sound_path

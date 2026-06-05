@@ -85,14 +85,6 @@ Terminal 1: bringup
 source ~/ros2_ws/install/setup.bash
 ros2 launch mini_pupper_bringup bringup.launch.py
 
-Terminal 2: pose controller
-source ~/ros2_ws/install/setup.bash
-ros2 run mini_pupper_dance pose_controller
-
-Terminal 3: controller joy input
-source ~/ros2_ws/install/setup.bash
-ros2 run joy joy_node --ros-args -p device_id:=0 -p autorepeat_rate:=20.0
-
 Terminal 4: full photo launch
 source ~/ros2_ws/install/setup.bash
 ros2 launch photo_pupper photobooth_launch.py
