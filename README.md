@@ -30,6 +30,21 @@ Contributors: Kazuya Miyata, Kane Li, Austin Choi
     └── test_pep257.py
 ```
 
+### Running the photobooth
+To run the photobooth, you will need to run two commands, one for the bringup of the mini pupper, and one for the photobooth launch file. If you wanna modify parameters, you can edit the node config file, located at `photo_pupper/config/node_config.yml`.
+
+Terminal 1: bringup
+```
+source ~/ros2_ws/install/setup.bash
+ros2 launch mini_pupper_bringup bringup.launch.py
+```
+
+Terminal 2: full photo launch
+```
+source ~/ros2_ws/install/setup.bash
+ros2 launch photo_pupper photobooth_launch.py
+```
+
 ### Configuration
 ```yaml
 # Toggle Nodes (1 is activated)
@@ -78,13 +93,3 @@ The `photo_processing_node` handles overlaying frames onto raw camera photograph
     * `bool success` - `true` if overlay compositing succeeded and saved.
     * `string message` - Detailed execution trace, saved path, or warning/error logs.
     * `string processed_path` - The absolute path to the generated output image.
-
-
-### Running the photobooth
-Terminal 1: bringup
-source ~/ros2_ws/install/setup.bash
-ros2 launch mini_pupper_bringup bringup.launch.py
-
-Terminal 4: full photo launch
-source ~/ros2_ws/install/setup.bash
-ros2 launch photo_pupper photobooth_launch.py
