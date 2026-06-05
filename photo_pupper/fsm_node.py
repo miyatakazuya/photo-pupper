@@ -19,10 +19,9 @@ from pathlib import Path
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from photo_pupper.srv import PlaySound, PrintImage, ProcessPhoto
+from photo_pupper.srv import PlaySound, PrintImage, ProcessPhoto, SaveImage
 from rclpy.node import Node
 from std_msgs.msg import String
-from std_srvs.srv import Trigger
 
 
 INPUT_CONFIRM = 'INPUT_CONFIRM'
@@ -245,7 +244,7 @@ class PupperFSM(Node):
             'print_image'
         )
         self.save_image_client = self.create_client(
-            Trigger,
+            SaveImage,
             'save_image'
         )
 
@@ -265,10 +264,10 @@ class PupperFSM(Node):
         self.pending_overlay_names = []
         self.final_keep_selected = True
         self.captured_photo_path = None
-        self.final_photo_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
         self.resource_dir = (
             Path(get_package_share_directory('photo_pupper')) / 'resource'
         )
+        self.final_photo_path = str(self.resource_dir / 'camera_image.jpg')
         self.state_timer = None
         self.enter_idle()
 
@@ -617,7 +616,9 @@ class PupperFSM(Node):
             )
             return
 
-        future = self.save_image_client.call_async(Trigger.Request())
+        request = SaveImage.Request()
+        request.filename = 'camera_image.jpg'
+        future = self.save_image_client.call_async(request)
         future.add_done_callback(self.handle_capture_response)
         self.get_logger().info('Requesting camera to save image...')
 
@@ -643,7 +644,7 @@ class PupperFSM(Node):
             self.enter_photo_reaction()
             return
 
-        self.captured_photo_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
+        self.captured_photo_path = str(self.resource_dir / 'camera_image.jpg')
         self.get_logger().info(
             f'Camera image saved to: {self.captured_photo_path}'
         )

@@ -13,6 +13,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/PrintImage.srv"
   "srv/ProcessPhoto.srv"
   "srv/PlaySound.srv"
+  "srv/SaveImage.srv"
 )
 
 install(DIRECTORY photo_pupper

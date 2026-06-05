@@ -9,7 +9,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
-from std_srvs.srv import Trigger
+from photo_pupper.srv import SaveImage
 from movement_node import (
     STAY,
     TURN_LEFT_SMALL,
@@ -17,7 +17,8 @@ from movement_node import (
     STEP_FORWARD_SMALL,
     STEP_BACKWARD_SMALL,
 )
-
+from ament_index_python.packages import get_package_share_directory
+from pathlib import Path
 
 class CameraNode(Node):
     def __init__(self):
@@ -35,13 +36,14 @@ class CameraNode(Node):
         self.publishing = False
         self.turn_threshold = 0.1
         self.latest_frame = None
+        self.save_path = Path(get_package_share_directory('photo_pupper')) / 'resource'
 
         # Publisher to send movement commands to movement_node
         self.movement_publisher = self.create_publisher(String, "movement_command", 10)
 
         # Service server to save current camera image
         self.save_image_srv = self.create_service(
-            Trigger, "save_image", self.save_image_callback
+            SaveImage, "save_image", self.save_image_callback
         )
 
         # Camera callback timer (20Hz)
@@ -119,7 +121,6 @@ class CameraNode(Node):
         self.pipeline.start()
 
     def timer_callback(self):
-        """Called by ROS 2 executor at a consistent rate."""
         # Non-blocking pull from hardware. If nothing is there, return immediately.
         imgFrame = self.preview_queue.tryGet()
         track = self.tracklets_queue.tryGet()
@@ -195,7 +196,9 @@ class CameraNode(Node):
             response.message = "Error: No camera frame captured yet."
             return response
 
-        save_path = "/home/ubuntu/ros2_ws/camera_image.jpg"
+        # Resolve the save path using request.filename and self.save_path
+        filename = request.filename if request.filename else "camera_image.jpg"
+        save_path = str(self.save_path / filename)
         try:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             cv2.imwrite(save_path, self.latest_frame)
