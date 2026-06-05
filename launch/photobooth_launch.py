@@ -41,4 +41,22 @@ def generate_launch_description():
                 output='screen'
             ))
 
+    launch_actions.append(Node(
+        package='mini_pupper_dance',
+        executable='pose_controller',
+        name='pose_controller',
+        output='screen'
+    ))
+
+    launch_actions.append(Node(
+        package='joy',
+        executable='joy_node',
+        name='joy_node',
+        parameters=[{
+            'device_id': 0,
+            'autorepeat_rate': 20.0
+        }],
+        output='screen'
+    ))
+
     return LaunchDescription(launch_actions)

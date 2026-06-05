@@ -8,6 +8,37 @@ from ament_index_python.packages import get_package_share_directory
 
 from photo_pupper.srv import ProcessPhoto
 
+
+OVERLAY_FILES = {
+    ProcessPhoto.Request.OVERLAY_FLOWERS: 'Overlay_Flowers.png',
+    ProcessPhoto.Request.OVERLAY_STARS: 'Overlay_Stars.png',
+    ProcessPhoto.Request.OVERLAY_PARTY: 'Overlay_Party.png',
+    ProcessPhoto.Request.OVERLAY_COMIC: 'Overlay_Comic.png',
+    ProcessPhoto.Request.OVERLAY_CLOUDS: 'Overlay_Clouds.png',
+    ProcessPhoto.Request.OVERLAY_CONFETTI: 'Overlay_Confetti.png',
+    ProcessPhoto.Request.OVERLAY_SAD_CLOUD: 'Overlay_Sad_Cloud.png',
+    ProcessPhoto.Request.OVERLAY_RAIN: 'Overlay_Rain.png',
+    ProcessPhoto.Request.OVERLAY_BROKEN_HEART: 'Overlay_Broken_Heart.png',
+    ProcessPhoto.Request.OVERLAY_BLACK_WHITE: 'Overlay_Black_White.png',
+    ProcessPhoto.Request.OVERLAY_CAUTION: 'Overlay_Caution.png',
+    ProcessPhoto.Request.OVERLAY_LOCKED_IN: 'Overlay_Locked_In.png',
+}
+
+
+def crop_to_aspect(image, target_aspect):
+    width, height = image.size
+    current_aspect = width / height
+
+    if current_aspect > target_aspect:
+        crop_width = int(height * target_aspect)
+        left = (width - crop_width) // 2
+        return image.crop((left, 0, left + crop_width, height))
+
+    crop_height = int(width / target_aspect)
+    top = (height - crop_height) // 2
+    return image.crop((0, top, width, top + crop_height))
+
+
 class PhotoProcessingNode(Node):
     def __init__(self):
         super().__init__('photo_processing_node')
@@ -35,30 +66,33 @@ class PhotoProcessingNode(Node):
             raw_img = Image.open(input_path).convert("RGBA")
             
             # 2. Select and load the overlay if any
-            if overlay_type == ProcessPhoto.Request.OVERLAY_FLOWERS:
-                pkg_share = get_package_share_directory('photo_pupper')
-                overlay_path = os.path.join(pkg_share, 'resource', 'OverlayTemplate.png')
-                
-                if not os.path.exists(overlay_path):
-                    overlay_path = '/home/kmiyata/dev/cse190/photo-pupper/resource/OverlayTemplate.png'
-                
-                if not os.path.exists(overlay_path):
-                    response.success = False
-                    response.message = f"ERROR: OverlayTemplate.png not found: '{overlay_path}'"
-                    self.get_logger().error(response.message)
-                    return response
-                
-                self.get_logger().info(f"Loading overlay frame from: '{overlay_path}'")
-                overlay_img = Image.open(overlay_path).convert("RGBA")
-                
-                # Resize the overlay to match raw photo dimensions
-                overlay_img = overlay_img.resize(raw_img.size, Image.LANCZOS)
-                
-                # Composite overlay on top of raw photo 
-                final_img = Image.alpha_composite(raw_img, overlay_img)
-            elif overlay_type == ProcessPhoto.Request.OVERLAY_NONE:
+            if overlay_type == ProcessPhoto.Request.OVERLAY_NONE:
                 self.get_logger().info("No overlay selected. Output will match input.")
                 final_img = raw_img
+            elif overlay_type in OVERLAY_FILES:
+                pkg_share = get_package_share_directory('photo_pupper')
+                overlay_path = os.path.join(
+                    pkg_share,
+                    'resource',
+                    OVERLAY_FILES[overlay_type]
+                )
+
+                if not os.path.exists(overlay_path):
+                    response.success = False
+                    response.message = f"ERROR: Overlay image not found: '{overlay_path}'"
+                    self.get_logger().error(response.message)
+                    return response
+
+                self.get_logger().info(
+                    f"Loading overlay frame from: '{overlay_path}'"
+                )
+                overlay_img = Image.open(overlay_path).convert("RGBA")
+                raw_img = crop_to_aspect(
+                    raw_img,
+                    overlay_img.width / overlay_img.height
+                )
+                overlay_img = overlay_img.resize(raw_img.size, Image.LANCZOS)
+                final_img = Image.alpha_composite(raw_img, overlay_img)
             else:
                 response.success = False
                 response.message = f"ERROR: Unsupported overlay type: {overlay_type}"

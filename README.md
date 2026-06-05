@@ -72,7 +72,7 @@ The `photo_processing_node` handles overlaying frames onto raw camera photograph
     * `string input_path` - The absolute path to the raw input photo on disk.
     * `uint8 overlay_type` - Enum selector for overlay frame style: // TODO ADD MORE
       * `OVERLAY_NONE = 0` - Copies raw photo directly with no border.
-      * `OVERLAY_FLOWERS = 1` - Overlays the custom transparent flower template (`OverlayTemplate.png`).
+      * `OVERLAY_FLOWERS = 1` - Overlays the transparent flower frame (`Overlay_Flowers.png`).
     * `string output_path` - (Optional) Custom path to write the JPEG output (automatically generates a path in `/tmp` if left empty).
   * **Response**:
     * `bool success` - `true` if overlay compositing succeeded and saved.

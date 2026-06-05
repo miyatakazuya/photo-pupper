@@ -35,23 +35,47 @@ GREETING_NOD = 'greeting_nod'
 THINKING_MOTION = 'thinking_motion'
 SPEAKING_MOTION = 'speaking_motion'
 SUCCESS_DANCE = 'success_dance'
+LOOK_MIDDLE = 'look_middle'
 STOP = 'stop'
+POSE_HOLD_SECONDS = 4.0
+THINKING_HOLD_SECONDS = 3.0
+REFRAME_TALK_SECONDS = 3.0
+REFRAMING_SECONDS = 3.0
 COUNTDOWN_SECONDS = 1.0
 PHOTO_CAPTURE_SECONDS = 1.5
 OVERLAY_CONFIRM_SECONDS = 2.5
 PRINTING_SCREEN_SECONDS = 4.0
-PRINT_COMPLETE_SECONDS = 2.0
 ERROR_RESET_SECONDS = 3.0
 
 PLACEHOLDER_CAPTURE_IMAGE = 'happy_man.png'
 DEFAULT_PRINT_MEDIA = ''
 
 MOODS = ['happy', 'silly', 'sad', 'serious']
+MOOD_EFFECTS = {
+    'happy': 'HappyBeep.wav',
+    'silly': 'HappyBeep.wav',
+    'sad': 'SadBeep.wav',
+    'serious': 'Beep.wav',
+}
 OVERLAYS_BY_MOOD = {
     'happy': ['stars', 'flowers', 'party'],
     'silly': ['comic', 'clouds', 'confetti'],
     'sad': ['sad_cloud', 'rain', 'broken_heart'],
     'serious': ['black_white', 'caution', 'locked_in'],
+}
+OVERLAY_TYPES = {
+    'flowers': ProcessPhoto.Request.OVERLAY_FLOWERS,
+    'stars': ProcessPhoto.Request.OVERLAY_STARS,
+    'party': ProcessPhoto.Request.OVERLAY_PARTY,
+    'comic': ProcessPhoto.Request.OVERLAY_COMIC,
+    'clouds': ProcessPhoto.Request.OVERLAY_CLOUDS,
+    'confetti': ProcessPhoto.Request.OVERLAY_CONFETTI,
+    'sad_cloud': ProcessPhoto.Request.OVERLAY_SAD_CLOUD,
+    'rain': ProcessPhoto.Request.OVERLAY_RAIN,
+    'broken_heart': ProcessPhoto.Request.OVERLAY_BROKEN_HEART,
+    'black_white': ProcessPhoto.Request.OVERLAY_BLACK_WHITE,
+    'caution': ProcessPhoto.Request.OVERLAY_CAUTION,
+    'locked_in': ProcessPhoto.Request.OVERLAY_LOCKED_IN,
 }
 POSE_LINES = {
     'happy': [
@@ -164,7 +188,7 @@ class FSMState(Enum):
     OVERLAY_SELECTION = 19
     OVERLAY_CONFIRM_TALK = 20
     OVERLAY_CONFIRM_CHOICE = 21
-    APPLY_OVERLAY = 22
+    PREPARE_OVERLAYS = 22
     FINAL_PREVIEW = 23
     FINAL_CONFIRMATION_PROMPT = 24
     FINAL_CONFIRMATION = 25
@@ -174,6 +198,15 @@ class FSMState(Enum):
     GOODBYE_TALK = 29
     GOODBYE_DANCE = 30
     ERROR_RESET = 31
+    INITIAL_CENTERING = 32
+    INITIAL_REFRAMING = 33
+    POSE_HOLD = 34
+    CAMERA_REFRAME_TALK = 35
+    PHOTO_CENTERING = 36
+    PHOTO_REFRAMING = 37
+    STARTUP_EFFECT = 38
+    MOOD_EFFECT = 39
+    THINKING_HOLD = 40
 
 
 class PupperFSM(Node):
@@ -228,6 +261,8 @@ class PupperFSM(Node):
         self.keep_photo_selected = True
         self.selected_overlay_index = 0
         self.overlay_confirm_yes_selected = True
+        self.overlay_preview_paths = {}
+        self.pending_overlay_names = []
         self.final_keep_selected = True
         self.captured_photo_path = None
         self.final_photo_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
@@ -251,7 +286,17 @@ class PupperFSM(Node):
         movement_event = msg.data.strip()
 
         if self.state == FSMState.REVEAL and movement_event == MOVEMENT_COMPLETE:
-            self.enter_welcome()
+            self.enter_initial_centering()
+        elif (
+            self.state == FSMState.INITIAL_CENTERING
+            and movement_event == MOVEMENT_COMPLETE
+        ):
+            self.enter_initial_reframing()
+        elif (
+            self.state == FSMState.PHOTO_CENTERING
+            and movement_event == MOVEMENT_COMPLETE
+        ):
+            self.enter_photo_reframing()
         elif (
             self.state == FSMState.GOODBYE_DANCE
             and movement_event == MOVEMENT_COMPLETE
@@ -260,7 +305,7 @@ class PupperFSM(Node):
 
     def handle_confirm(self):
         if self.state == FSMState.IDLE:
-            self.enter_reveal()
+            self.enter_startup_effect()
         elif self.state == FSMState.READY:
             self.confirm_ready_selection()
         elif self.state == FSMState.MOOD_SELECTION:
@@ -314,6 +359,8 @@ class PupperFSM(Node):
         self.keep_photo_selected = True
         self.selected_overlay_index = 0
         self.overlay_confirm_yes_selected = True
+        self.overlay_preview_paths = {}
+        self.pending_overlay_names = []
         self.final_keep_selected = True
         self.captured_photo_path = None
         self.final_photo_path = None
@@ -323,7 +370,36 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.REVEAL
         self.show_screen('reveal')
+        # Keep camera reframing disabled during the reveal walk
         self.send_movement(WALK_FORWARD)
+
+    def enter_startup_effect(self):
+        self.clear_state_timer()
+        self.state = FSMState.STARTUP_EFFECT
+        self.show_screen('startup')
+        self.play_effect('Startup.wav', self.enter_reveal)
+
+    def enter_initial_centering(self):
+        self.clear_state_timer()
+        self.state = FSMState.INITIAL_CENTERING
+        self.show_screen('reframing')
+        # disable camera reframing before this neutral pose
+        self.send_movement(LOOK_MIDDLE)
+
+    def enter_initial_reframing(self):
+        self.clear_state_timer()
+        self.state = FSMState.INITIAL_REFRAMING
+        self.show_screen('reframing')
+        # enable reframing here and replace this timer with completion
+        self.state_timer = self.create_timer(
+            REFRAMING_SECONDS,
+            self.complete_initial_reframing
+        )
+
+    def complete_initial_reframing(self):
+        self.clear_state_timer()
+        # disable reframing before the greeting movement begins
+        self.enter_welcome()
 
     def enter_welcome(self):
         self.clear_state_timer()
@@ -394,10 +470,18 @@ class PupperFSM(Node):
 
     def confirm_mood_selection(self):
         if self.mood_confirm_yes_selected:
-            self.say('Mood confirmed. Pose suggestion comes next.')
-            self.enter_pose_thinking()
+            self.enter_mood_effect()
         else:
             self.enter_mood_selection()
+
+    def enter_mood_effect(self):
+        self.clear_state_timer()
+        self.state = FSMState.MOOD_EFFECT
+        self.show_screen('pose_thinking')
+        self.play_effect(
+            MOOD_EFFECTS[self.current_mood()],
+            self.enter_pose_thinking
+        )
 
     def enter_pose_thinking(self):
         self.clear_state_timer()
@@ -405,8 +489,17 @@ class PupperFSM(Node):
         self.show_screen('pose_thinking')
         self.say_clip(
             f'think_{self.current_mood()}',
-            self.enter_pose_suggestion,
+            self.enter_thinking_hold,
             THINKING_MOTION
+        )
+
+    def enter_thinking_hold(self):
+        self.clear_state_timer()
+        self.state = FSMState.THINKING_HOLD
+        self.show_screen('pose_thinking')
+        self.state_timer = self.create_timer(
+            THINKING_HOLD_SECONDS,
+            self.enter_pose_suggestion
         )
 
     def enter_pose_suggestion(self):
@@ -418,16 +511,59 @@ class PupperFSM(Node):
         self.show_pose_screen()
         self.say_clip(
             f'pose_{self.current_mood()}_{self.selected_pose_index + 1}',
-            self.enter_camera_ready,
+            self.enter_pose_hold,
             SPEAKING_MOTION
         )
+
+    def enter_pose_hold(self):
+        self.clear_state_timer()
+        self.state = FSMState.POSE_HOLD
+        self.show_pose_screen()
+        self.state_timer = self.create_timer(
+            POSE_HOLD_SECONDS,
+            self.enter_camera_reframe_talk
+        )
+
+    def enter_camera_reframe_talk(self):
+        self.clear_state_timer()
+        self.state = FSMState.CAMERA_REFRAME_TALK
+        self.show_screen('reframing')
+        # Replace this timer when the new speech line has completion feedback
+        self.say(
+            'Hold that pose while I line you up for the camera.'
+        )
+        self.state_timer = self.create_timer(
+            REFRAME_TALK_SECONDS,
+            self.enter_photo_centering
+        )
+
+    def enter_photo_centering(self):
+        self.clear_state_timer()
+        self.state = FSMState.PHOTO_CENTERING
+        self.show_screen('reframing')
+        # disable camera reframing before this
+        self.send_movement(LOOK_MIDDLE)
+
+    def enter_photo_reframing(self):
+        self.clear_state_timer()
+        self.state = FSMState.PHOTO_REFRAMING
+        self.show_screen('reframing')
+        # enable reframing here and replace this timer with when reframing is done
+        self.state_timer = self.create_timer(
+            REFRAMING_SECONDS,
+            self.complete_photo_reframing
+        )
+
+    def complete_photo_reframing(self):
+        self.clear_state_timer()
+        # disable reframing, then switch the LCD to the camera view
+        self.enter_camera_ready()
 
     def enter_camera_ready(self):
         self.clear_state_timer()
         self.state = FSMState.CAMERA_READY
-        # reframing
         self.show_screen('camera_ready')
-        # Later this can switch to the DepthAI camera view.
+        # keep the live camera view active in this state
         self.say_clip('camera_ready')
 
     def enter_countdown_intro(self):
@@ -468,7 +604,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CAPTURE
         self.show_screen('photo_capture')  # screen flash
-        self.play_sound('/usr/share/sounds/alsa/Noise.wav')
+        self.play_effect('PhotoCapture.wav')
 
         if not self.save_image_client.service_is_ready():
             self.get_logger().warn('save_image service not ready, using placeholder')
@@ -551,7 +687,7 @@ class PupperFSM(Node):
             self.enter_overlay_intro()
         else:
             self.say("No problem, let's try again.")
-            self.enter_camera_ready()
+            self.enter_camera_reframe_talk()
 
     def enter_overlay_intro(self):
         self.clear_state_timer()
@@ -559,9 +695,73 @@ class PupperFSM(Node):
         self.show_screen('overlay_intro_talking')
         self.say_clip(
             'overlay_instructions',
-            self.enter_overlay_selection,
+            self.enter_prepare_overlay_previews,
             SPEAKING_MOTION
         )
+
+    def enter_prepare_overlay_previews(self):
+        self.clear_state_timer()
+        self.state = FSMState.PREPARE_OVERLAYS
+        self.show_screen('overlay_processing')
+        self.overlay_preview_paths = {}
+        self.pending_overlay_names = list(
+            OVERLAYS_BY_MOOD[self.current_mood()]
+        )
+        self.prepare_next_overlay_preview()
+
+    def prepare_next_overlay_preview(self):
+        if not self.pending_overlay_names:
+            self.enter_overlay_selection()
+            return
+
+        if not self.photo_processing_client.service_is_ready():
+            self.enter_error_reset(
+                'Sorry, photo processing is not ready. Resetting.'
+            )
+            return
+
+        overlay_name = self.pending_overlay_names.pop(0)
+        request = ProcessPhoto.Request()
+        request.input_path = self.captured_photo_path
+        request.overlay_type = self.current_overlay_type(overlay_name)
+        request.output_path = ''
+
+        future = self.photo_processing_client.call_async(request)
+        future.add_done_callback(
+            lambda done_future: self.handle_overlay_preview_response(
+                done_future,
+                overlay_name
+            )
+        )
+        self.get_logger().info(f'Preparing overlay preview: {overlay_name}')
+
+    def handle_overlay_preview_response(self, future, overlay_name):
+        if self.state != FSMState.PREPARE_OVERLAYS:
+            return
+
+        try:
+            response = future.result()
+        except Exception as error:
+            self.get_logger().error(
+                f'Overlay preview failed for {overlay_name}: {error}'
+            )
+            self.enter_error_reset(
+                'Sorry, the photo overlay had trouble. Resetting.'
+            )
+            return
+
+        if not response.success:
+            self.get_logger().error(
+                f'Overlay preview failed for {overlay_name}: '
+                f'{response.message}'
+            )
+            self.enter_error_reset(
+                'Sorry, the photo overlay had trouble. Resetting.'
+            )
+            return
+
+        self.overlay_preview_paths[overlay_name] = response.processed_path
+        self.prepare_next_overlay_preview()
 
     def enter_overlay_selection(self):
         self.clear_state_timer()
@@ -594,51 +794,20 @@ class PupperFSM(Node):
 
     def confirm_overlay_choice(self):
         if self.overlay_confirm_yes_selected:
-            self.enter_apply_overlay()
+            self.final_photo_path = self.overlay_preview_paths.get(
+                self.current_overlay()
+            )
+
+            if self.final_photo_path is None:
+                self.enter_error_reset(
+                    'Sorry, the selected overlay is not ready. Resetting.'
+                )
+                return
+
+            self.enter_final_preview()
         else:
             self.say("No problem, let's choose again.")
             self.enter_overlay_selection()
-
-    def enter_apply_overlay(self):
-        self.clear_state_timer()
-        self.state = FSMState.APPLY_OVERLAY
-        self.show_screen('apply_overlay')
-        self.say_clip('apply_overlay')
-
-        if not self.photo_processing_client.service_is_ready():
-            self.enter_error_reset('Sorry, photo processing is not ready. Resetting.')
-            return
-
-        request = ProcessPhoto.Request()
-        request.input_path = self.captured_photo_path
-        request.overlay_type = self.current_overlay_type()
-        request.output_path = ''
-
-        future = self.photo_processing_client.call_async(request)
-        future.add_done_callback(self.handle_process_photo_response)
-        self.get_logger().info(
-            f'Processing photo with overlay: {self.current_overlay()}'
-        )
-
-    def handle_process_photo_response(self, future):
-        if self.state != FSMState.APPLY_OVERLAY:
-            return
-
-        try:
-            response = future.result()
-        except Exception as error:
-            self.get_logger().error(f'Photo processing failed: {error}')
-            self.enter_error_reset('Sorry, the photo overlay had trouble. Resetting.')
-            return
-
-        if not response.success:
-            self.get_logger().error(f'Photo processing failed: {response.message}')
-            self.enter_error_reset('Sorry, the photo overlay had trouble. Resetting.')
-            return
-
-        self.final_photo_path = response.processed_path
-        self.get_logger().info(f'Processed photo path: {self.final_photo_path}')
-        self.enter_final_preview()
 
     def enter_final_preview(self):
         self.clear_state_timer()
@@ -672,7 +841,7 @@ class PupperFSM(Node):
             self.enter_print_intro_talk()
         else:
             self.say("No problem, let's try the photo again.")
-            self.enter_camera_ready()
+            self.enter_camera_reframe_talk()
 
     def enter_print_intro_talk(self):
         self.clear_state_timer()
@@ -731,11 +900,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PRINT_COMPLETE
         self.show_screen('done')
-        self.play_sound('/usr/share/sounds/speech-dispatcher/dummy-message.wav')
-        self.state_timer = self.create_timer(
-            PRINT_COMPLETE_SECONDS,
-            self.enter_goodbye_talk
-        )
+        self.play_effect('Success.wav', self.enter_goodbye_talk)
 
     def enter_goodbye_talk(self):
         self.clear_state_timer()
@@ -790,7 +955,9 @@ class PupperFSM(Node):
             self.show_screen('photo_retake')
 
     def show_overlay_screen(self):
-        self.show_screen(f'overlay_{self.current_overlay()}')
+        overlay_name = self.current_overlay()
+        preview_path = self.overlay_preview_paths.get(overlay_name)
+        self.show_screen(preview_path or f'overlay_{overlay_name}')
 
     def show_overlay_confirmation_screen(self):
         if self.overlay_confirm_yes_selected:
@@ -816,9 +983,8 @@ class PupperFSM(Node):
     def current_overlay_label(self):
         return self.current_overlay().replace('_', ' ').title()
 
-    def current_overlay_type(self):
-        # Replace this when ProcessPhoto.srv has one enum per overlay.
-        return ProcessPhoto.Request.OVERLAY_FLOWERS
+    def current_overlay_type(self, overlay_name=None):
+        return OVERLAY_TYPES[overlay_name or self.current_overlay()]
 
     def show_screen(self, screen_name):
         msg = String()
@@ -859,6 +1025,19 @@ class PupperFSM(Node):
     def say(self, text):
         # Replace this with TTS when the speech node is ready.
         self.get_logger().info(f'[Pupper says] {text}')
+
+    def play_effect(self, filename, next_callback=None):
+        expected_state = self.state
+        sound_file = self.audio_dir / filename
+        sound_started = self.play_sound(
+            str(sound_file),
+            next_callback,
+            None,
+            expected_state
+        )
+
+        if not sound_started and next_callback is not None:
+            next_callback()
 
     def say_clip(self, clip_name, next_callback=None, movement_command=None):
         self.say(AUDIO_LINES.get(clip_name, clip_name))
