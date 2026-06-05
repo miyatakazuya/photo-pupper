@@ -52,7 +52,7 @@ MOVEMENT_SEQUENCES = {
     'look_right_slow': ['look_right_slow'],
     GREETING_NOD: ['look_up_slow', 'look_down_slow', 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_down_fast', LOOK_MIDDLE],
     THINKING_MOTION: ['look_up_slow', 'pause_long', 'look_right', 'pause_long', LOOK_MIDDLE],
-    SPEAKING_MOTION: ['look_up_slow', 'look_down_slow', 'look_right_slow', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_left_fast', 'look_up_slow', LOOK_MIDDLE],
+    SPEAKING_MOTION: ['look_up_slow', 'look_down_slow', 'look_right_slow', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_left_slow', 'look_up_slow', LOOK_MIDDLE],
     SUCCESS_DANCE: [
         STEP_LEFT_SMALL,
         STEP_RIGHT_SMALL,
