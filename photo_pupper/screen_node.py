@@ -67,9 +67,9 @@ SCREEN_IMAGES = {
     'pose_serious_1': 'Serious_Pose_CrossArms.jpg',
     'pose_serious_2': 'Serious_Pose_Superman.jpg',
     'pose_serious_3': 'Serious_Pose_Thinker.jpg',
-    'countdown_3': 'Countdown_3.jpg',
-    'countdown_2': 'Countdown_2.jpg',
-    'countdown_1': 'Countdown_1.jpg',
+    'countdown_3': 'countdown_3.png',
+    'countdown_2': 'countdown_2.png',
+    'countdown_1': 'countdown_1.png',
     'photo_preview': 'camera_image.jpg',
     'overlay_stars': 'Overlay_Stars.png',
     'overlay_flowers': 'Overlay_Flowers.png',
@@ -162,9 +162,15 @@ class ScreenSubscriber(Node):
         self.animation_frames = []
         self.animation_index = 0
         self.live_camera_active = False
+        self.live_camera_overlay = None
         self.live_camera_path = (
             Path(tempfile.gettempdir()) / 'photo_pupper_live_camera.jpg'
         )
+        self.countdown_overlays = {}
+        for number in (1, 2, 3):
+            overlay_path = RESOURCE_DIR / f'countdown_{number}.png'
+            with Image.open(overlay_path) as overlay:
+                self.countdown_overlays[number] = overlay.convert('RGBA')
         self.subscription = self.create_subscription(
             String,
             'screen_command',
@@ -188,8 +194,15 @@ class ScreenSubscriber(Node):
 
         try:
             with Image.open(BytesIO(bytes(msg.data))) as image:
-                frame = image.convert('RGB').resize((320, 240))
-                frame.save(self.live_camera_path, 'JPEG')
+                frame = image.convert('RGBA').resize((320, 240))
+
+            if self.live_camera_overlay is not None:
+                frame = Image.alpha_composite(
+                    frame,
+                    self.live_camera_overlay
+                )
+
+            frame.convert('RGB').save(self.live_camera_path, 'JPEG')
             self.display.show_image(str(self.live_camera_path))
         except Exception as error:
             self.get_logger().warn(f'Could not display camera frame: {error}')
@@ -198,15 +211,29 @@ class ScreenSubscriber(Node):
         if screen_name == 'camera_live_start':
             self.stop_animation()
             self.live_camera_active = True
+            self.live_camera_overlay = None
             self.get_logger().info('Showing live camera')
             return
 
         if screen_name == 'camera_live_stop':
             self.live_camera_active = False
+            self.live_camera_overlay = None
             self.get_logger().info('Stopping live camera')
             return
 
+        if screen_name.startswith('camera_countdown_'):
+            countdown_number = int(screen_name.rsplit('_', 1)[1])
+            self.live_camera_active = True
+            self.live_camera_overlay = self.countdown_overlays[
+                countdown_number
+            ]
+            self.get_logger().info(
+                f'Showing camera countdown: {countdown_number}'
+            )
+            return
+
         self.live_camera_active = False
+        self.live_camera_overlay = None
 
         if screen_name.startswith('/'):
             self.stop_animation()

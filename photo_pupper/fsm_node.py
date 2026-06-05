@@ -598,6 +598,7 @@ class PupperFSM(Node):
 
     def show_countdown_step(self):
         self.say(str(self.countdown_number))
+        self.show_screen(f'camera_countdown_{self.countdown_number}')
         self.state_timer = self.create_timer(
             COUNTDOWN_SECONDS,
             self.advance_countdown

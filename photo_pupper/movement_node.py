@@ -50,9 +50,9 @@ MOVEMENT_SEQUENCES = {
     'look_left_slow': ['look_left_slow'],
     'look_right': ['look_right'],
     'look_right_slow': ['look_right_slow'],
-    GREETING_NOD: ['look_up_slow', 'look_down_slow', 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_down_slow', LOOK_MIDDLE],
-    THINKING_MOTION: ['look_up_slow', 'pause_short', 'look_right', LOOK_MIDDLE],
-    SPEAKING_MOTION: ['look_up_slow', 'look_down', 'look_right', LOOK_MIDDLE, 'look_up_fast', 'look_down_fast', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', 'look_up', LOOK_MIDDLE],
+    GREETING_NOD: ['look_up_slow', 'look_down_slow', 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_down_fast', LOOK_MIDDLE],
+    THINKING_MOTION: ['look_up_slow', 'pause_long', 'look_right', 'pause_long', LOOK_MIDDLE],
+    SPEAKING_MOTION: ['look_up_slow', 'look_down_slow', 'look_right_slow', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_left_fast', 'look_up_slow', LOOK_MIDDLE],
     SUCCESS_DANCE: [
         STEP_LEFT_SMALL,
         STEP_RIGHT_SMALL,
@@ -221,14 +221,14 @@ class MovementNode(Node):
             },
             'look_up_fast': {
                 'kind': 'pose',
-                'duration': self.pose_seconds,
+                'duration': 0.8,
                 'roll': 0.0,
                 'pitch': -0.3,
                 'yaw': 0.0,
             },
             'look_up_slow': {
                 'kind': 'pose',
-                'duration': 0.8,
+                'duration': 1.2,
                 'roll': 0.0,
                 'pitch': -0.2,
                 'yaw': 0.0,
@@ -242,9 +242,9 @@ class MovementNode(Node):
             },
             'look_down_fast': {
                 'kind': 'pose',
-                'duration': 0.2,
+                'duration': 1.2,
                 'roll': 0.0,
-                'pitch': 0.2,
+                'pitch': 0.3,
                 'yaw': 0.0,
             },
             'look_down_slow': {
