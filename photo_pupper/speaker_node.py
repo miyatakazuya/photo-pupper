@@ -15,17 +15,17 @@ class SpeakerNode(Node):
 
         # Declare volume parameter defaulting to 50%
         self.declare_parameter('volume_percent', 50)
-        volume = self.get_parameter('volume_percent').get_parameter_value().integer_value
+        self.volume = self.get_parameter('volume_percent').get_parameter_value().integer_value
 
-        os.system(f"amixer -c 2 sset Master {volume}% unmute > /dev/null 2>&1")
-        os.system(f"amixer -c 2 sset PCM {volume}% unmute > /dev/null 2>&1")
-        os.system(f"amixer -c 2 sset Speaker {volume}% unmute > /dev/null 2>&1")
+        os.system(f"amixer -c 2 sset Master {self.volume}% unmute > /dev/null 2>&1")
+        os.system(f"amixer -c 2 sset PCM {self.volume}% unmute > /dev/null 2>&1")
+        os.system(f"amixer -c 2 sset Speaker {self.volume}% unmute > /dev/null 2>&1")
 
         sd.default.device = 1
 
         # Create the service server
         self.srv = self.create_service(PlaySound, 'play_sound', self.play_sound_callback)
-        self.get_logger().info(f"Speaker Node loaded (volume: {volume}%)")
+        self.get_logger().info(f"Speaker Node loaded (volume: {self.volume}%)")
 
     def play_sound_callback(self, request, response):
         target_path = request.sound_path
@@ -41,7 +41,9 @@ class SpeakerNode(Node):
             data, fs = sf.read(target_path)
 
             self.get_logger().info(f"Playing sound file: {target_path}")
-            sd.play(data, fs)
+            # Scale the audio samples digitally to prevent it from being too loud
+            volume_factor = self.volume / 100.0
+            sd.play(data * volume_factor, fs)
             sd.wait()
 
             response.success = True

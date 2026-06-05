@@ -278,6 +278,14 @@ class MovementNode(Node):
         self.real_movement = (
             self.get_parameter("real_movement").get_parameter_value().bool_value
         )
+        self.declare_parameter('enable_logging', True)
+        self.enable_logging = (
+            self.get_parameter("enable_logging").get_parameter_value().bool_value
+        )
+        if not self.enable_logging:
+            from rclpy.logging import LoggingSeverity
+            self.get_logger().set_level(LoggingSeverity.WARN)
+
         self.event_publisher = self.create_publisher(String, "movement_event", 10)
         self.velocity_publisher = self.create_publisher(Twist, "cmd_vel", 10)
         self.pose_publisher = self.create_publisher(Pose, "reference_body_pose", 10)

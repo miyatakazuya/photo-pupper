@@ -2,7 +2,11 @@
 photobooth_nodes:
   fsm_node: 1
   gamepad_node: 1
-  movement_node: 1
+  movement_node:
+    enabled: 1
+    parameters:
+      real_movement: true
+      enable_logging: false
   camera_node:
     enabled: 1
     parameters:
