@@ -8,4 +8,3 @@ photobooth_nodes:
   screen_node: 1
   touch_node: 0
   speaker_node: 1
-  joy_node: 0
