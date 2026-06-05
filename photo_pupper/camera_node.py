@@ -32,11 +32,18 @@ class CameraNode(Node):
         self.get_logger().info("Initializing DepthAI Pipeline...")
         self.setup_depthai_pipeline()
 
-        # params
-        self.publishing = False
-        self.turn_threshold = 0.1
+        # Declare parameters
+        self.declare_parameter("publishing", False)
+        self.declare_parameter("turn_threshold", 0.1)
+        self.declare_parameter("hz", 2.0)
+
+        # Get parameter values
+        self.publishing = self.get_parameter("publishing").get_parameter_value().bool_value
+        self.turn_threshold = self.get_parameter("turn_threshold").get_parameter_value().double_value
+        self.hz = self.get_parameter("hz").get_parameter_value().double_value
+        
+        # camera captured frames
         self.latest_frame = None
-        self.save_path = Path(get_package_share_directory('photo_pupper')) / 'resource'
 
         # Publisher to send movement commands to movement_node
         self.movement_publisher = self.create_publisher(String, "movement_command", 10)
@@ -47,7 +54,7 @@ class CameraNode(Node):
         )
 
         # Camera callback timer (20Hz)
-        timer_period = 1.0 / 2.0
+        timer_period = 1.0 / self.hz
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.get_logger().info(f"Node spinning. Targeting {1.0 / timer_period} FPS.")
 
@@ -198,7 +205,7 @@ class CameraNode(Node):
 
         # Resolve the save path using request.filename and self.save_path
         filename = request.filename if request.filename else "camera_image.jpg"
-        save_path = str(self.save_path / filename)
+        save_path = str(Path(get_package_share_directory('photo_pupper')) / 'resource' / filename)
         try:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             cv2.imwrite(save_path, self.latest_frame)

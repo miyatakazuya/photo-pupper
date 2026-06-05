@@ -3,6 +3,12 @@ photobooth_nodes:
   fsm_node: 1
   gamepad_node: 1
   movement_node: 1
+  camera_node:
+    enabled: 1
+    parameters:
+      publishing: false
+      turn_threshold: 0.15
+      hz: 2.0
   photo_processing_node: 1
   printer_node: 1
   screen_node: 1
