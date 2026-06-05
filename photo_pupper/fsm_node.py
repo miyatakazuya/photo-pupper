@@ -467,16 +467,51 @@ class PupperFSM(Node):
     def enter_photo_capture(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CAPTURE
-        self.show_screen('photo_capture') # screen flash
-        # Replace with the DepthAI snapshot path when capture is ready.
+        self.show_screen('photo_capture')  # screen flash
         self.play_sound('/usr/share/sounds/alsa/Noise.wav')
-        self.captured_photo_path = str(
-            self.resource_dir / PLACEHOLDER_CAPTURE_IMAGE
+
+        if not self.save_image_client.service_is_ready():
+            self.get_logger().warn('save_image service not ready, using placeholder')
+            self.captured_photo_path = str(
+                self.resource_dir / PLACEHOLDER_CAPTURE_IMAGE
+            )
+            self.state_timer = self.create_timer(
+                PHOTO_CAPTURE_SECONDS,
+                self.enter_photo_reaction
+            )
+            return
+
+        future = self.save_image_client.call_async(Trigger.Request())
+        future.add_done_callback(self.handle_capture_response)
+        self.get_logger().info('Requesting camera to save image...')
+
+    def handle_capture_response(self, future):
+        if self.state != FSMState.PHOTO_CAPTURE:
+            return
+
+        try:
+            response = future.result()
+        except Exception as error:
+            self.get_logger().error(f'Camera capture failed: {error}')
+            self.captured_photo_path = str(
+                self.resource_dir / PLACEHOLDER_CAPTURE_IMAGE
+            )
+            self.enter_photo_reaction()
+            return
+
+        if not response.success:
+            self.get_logger().error(f'Camera capture failed: {response.message}')
+            self.captured_photo_path = str(
+                self.resource_dir / PLACEHOLDER_CAPTURE_IMAGE
+            )
+            self.enter_photo_reaction()
+            return
+
+        self.captured_photo_path = '/home/ubuntu/ros2_ws/camera_image.jpg'
+        self.get_logger().info(
+            f'Camera image saved to: {self.captured_photo_path}'
         )
-        self.state_timer = self.create_timer(
-            PHOTO_CAPTURE_SECONDS,
-            self.enter_photo_reaction
-        )
+        self.enter_photo_reaction()
 
     def enter_photo_reaction(self):
         self.clear_state_timer()
@@ -491,15 +526,13 @@ class PupperFSM(Node):
     def enter_photo_preview_ready(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_PREVIEW_READY
-        self.show_screen('photo_preview')
-        # Later this should show the real captured photo.
+        self.show_screen(self.captured_photo_path or 'photo_preview')
         self.say_clip('preview_continue')
 
     def enter_photo_review_prompt(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_REVIEW_PROMPT
-        self.show_screen('photo_preview')
-        # Later this should keep showing the real captured photo.
+        self.show_screen(self.captured_photo_path or 'photo_preview')
         self.say_clip(
             'review_prompt',
             self.enter_photo_review_choice,
@@ -610,8 +643,7 @@ class PupperFSM(Node):
     def enter_final_preview(self):
         self.clear_state_timer()
         self.state = FSMState.FINAL_PREVIEW
-        self.show_screen('final_preview')
-        # Later this should show the real processed photo.
+        self.show_screen(self.final_photo_path or 'final_preview')
         self.say_clip(
             'final_preview',
             self.enter_final_confirmation_prompt,
@@ -621,8 +653,7 @@ class PupperFSM(Node):
     def enter_final_confirmation_prompt(self):
         self.clear_state_timer()
         self.state = FSMState.FINAL_CONFIRMATION_PROMPT
-        self.show_screen('final_preview')
-        # Later this should keep showing the real processed photo.
+        self.show_screen(self.final_photo_path or 'final_preview')
         self.say_clip(
             'final_prompt',
             self.enter_final_confirmation,
@@ -658,32 +689,9 @@ class PupperFSM(Node):
         self.state = FSMState.PRINTING
         self.show_screen('printing')
 
-        if not self.save_image_client.service_is_ready():
-            self.enter_error_reset('Sorry, the camera is not ready. Resetting.')
+        if self.final_photo_path is None:
+            self.enter_error_reset('No processed photo to print.')
             return
-
-        request = Trigger.Request()
-        future = self.save_image_client.call_async(request)
-        future.add_done_callback(self.handle_save_image_response)
-        self.get_logger().info('Requesting camera_node to save current image...')
-
-    def handle_save_image_response(self, future):
-        if self.state != FSMState.PRINTING:
-            return
-
-        try:
-            response = future.result()
-        except Exception as error:
-            self.get_logger().error(f'Save image failed: {error}')
-            self.enter_error_reset('Sorry, the camera had trouble. Resetting.')
-            return
-
-        if not response.success:
-            self.get_logger().error(f'Save image failed: {response.message}')
-            self.enter_error_reset('Sorry, the camera had trouble. Resetting.')
-            return
-
-        self.get_logger().info('Image saved successfully. Now printing...')
 
         if not self.printer_client.service_is_ready():
             self.enter_error_reset('Sorry, the printer is not ready. Resetting.')
@@ -693,8 +701,8 @@ class PupperFSM(Node):
         request.image_path = self.final_photo_path
         request.media_size = DEFAULT_PRINT_MEDIA
 
-        future_print = self.printer_client.call_async(request)
-        future_print.add_done_callback(self.handle_print_response)
+        future = self.printer_client.call_async(request)
+        future.add_done_callback(self.handle_print_response)
         self.get_logger().info(f'Printing image: {self.final_photo_path}')
 
     def handle_print_response(self, future):

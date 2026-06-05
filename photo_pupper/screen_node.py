@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from pathlib import Path
 
 import rclpy
@@ -153,6 +154,15 @@ class ScreenSubscriber(Node):
         self.show_screen(msg.data.strip())
 
     def show_screen(self, screen_name):
+        if screen_name.startswith('/'):
+            self.stop_animation()
+            if os.path.exists(screen_name):
+                self.display.show_image(screen_name)
+                self.get_logger().info(f'Displaying image from path: {screen_name}')
+            else:
+                self.get_logger().warn(f'Image path not found: {screen_name}')
+            return
+
         if screen_name in SCREEN_ANIMATIONS:
             self.start_animation(screen_name)
             return
