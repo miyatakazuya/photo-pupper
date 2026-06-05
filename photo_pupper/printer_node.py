@@ -18,7 +18,27 @@ class PrinterNode(Node):
         
         # Create the service server 
         self.srv = self.create_service(PrintImage, 'print_image', self.print_image_callback)
-        self.get_logger().info("Printer Node loaded")
+        self.check_printer()
+
+    def check_printer(self):
+        try:
+            result = subprocess.run(
+                ['lpstat', '-p', self.printer_name],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
+            if result.returncode == 0:
+                self.get_logger().info(
+                    f'Printer connected: {self.printer_name}'
+                )
+            else:
+                self.get_logger().warn(
+                    f'Printer not found: {self.printer_name}. '
+                    f'Print jobs will fail until it is connected.'
+                )
+        except FileNotFoundError:
+            self.get_logger().warn(
+                'CUPS (lpstat) not installed. Printing will not work.'
+            )
 
     def print_image_callback(self, request, response):
         target_path = request.image_path
