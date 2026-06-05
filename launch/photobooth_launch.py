@@ -13,6 +13,11 @@ def generate_launch_description():
         with open(node_config_path, "r") as f:
             config = yaml.safe_load(f)
             nodes_to_run = config.get("photobooth_nodes", {})
+            print("\n==========================================")
+            print(f"Loading node_config: {node_config_path}")
+            for node, cfg in nodes_to_run.items():
+                print(f"  - {node}: {cfg}")
+            print("==========================================\n")
     except Exception as e:
         print(f"ERROR loading node_config: {e}")
         return LaunchDescription()

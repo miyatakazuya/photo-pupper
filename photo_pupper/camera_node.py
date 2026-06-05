@@ -208,7 +208,8 @@ class CameraNode(Node):
         save_path = str(Path(get_package_share_directory('photo_pupper')) / 'resource' / filename)
         try:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            cv2.imwrite(save_path, self.latest_frame)
+            resized_frame = cv2.resize(self.latest_frame, (320, 240))
+            cv2.imwrite(save_path, resized_frame)
             response.success = True
             response.message = f"Successfully saved current camera image to {save_path}"
             self.get_logger().info(response.message)
