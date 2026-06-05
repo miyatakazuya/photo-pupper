@@ -80,8 +80,19 @@ The `photo_processing_node` handles overlaying frames onto raw camera photograph
     * `string processed_path` - The absolute path to the generated output image.
 
 
-### Person Following Setup 
-* **Camera_node**: `ros2 run photo_pupper camera_node`. By default, I disabled logging and publishing the image topic to save on compute. Exposes a `/save_image` service of type `std_srvs/srv/Trigger` to save the current camera frame directly to `/home/ubuntu/ros2_ws/camera_image.jpg`.
-* **Movement_service**: `ros2 run go_pupper_srv service`
-* **Bringup**: `ros2 launch mini_pupper_bringup bringup.launch.py`
-* **Visualizer**: `ros2 run foxglove_bridge foxglove_bridge_launch.xml`. You will also need to open up Foxglove in your browser and connect to ws://137.110.215.75:8765
+### Running the photobooth
+Terminal 1: bringup
+source ~/ros2_ws/install/setup.bash
+ros2 launch mini_pupper_bringup bringup.launch.py
+
+Terminal 2: pose controller
+source ~/ros2_ws/install/setup.bash
+ros2 run mini_pupper_dance pose_controller
+
+Terminal 3: controller joy input
+source ~/ros2_ws/install/setup.bash
+ros2 run joy joy_node --ros-args -p device_id:=0 -p autorepeat_rate:=20.0
+
+Terminal 4: full photo launch
+source ~/ros2_ws/install/setup.bash
+ros2 launch photo_pupper photobooth_launch.py
