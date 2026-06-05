@@ -15,9 +15,10 @@ photobooth_nodes:
   camera_node:
     enabled: 1
     parameters:
-      publishing: false
+      publishing: true
       turn_threshold: 0.15
       hz: 2.0
+      centered_frames_required: 3
   photo_processing_node: 1
   printer_node: 1
   screen_node: 1

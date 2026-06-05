@@ -2,24 +2,26 @@
 
 import cv2
 import depthai as dai
-import time
 import os
+from pathlib import Path
 
 import rclpy
+from ament_index_python.packages import get_package_share_directory
+from photo_pupper.srv import SaveImage
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
-from photo_pupper.srv import SaveImage
 from movement_node import (
-    STAY,
     TURN_LEFT_SMALL,
     TURN_RIGHT_SMALL,
     STEP_FORWARD_SMALL,
     STEP_BACKWARD_SMALL,
 )
-from ament_index_python.packages import get_package_share_directory
-from pathlib import Path
+
+
+REFRAMING_COMPLETE = "REFRAMING_COMPLETE"
+
 
 class CameraNode(Node):
     def __init__(self):
@@ -37,20 +39,40 @@ class CameraNode(Node):
         self.declare_parameter("publishing", False)
         self.declare_parameter("turn_threshold", 0.1)
         self.declare_parameter("hz", 2.0)
+        self.declare_parameter("centered_frames_required", 3)
 
         # Get parameter values
-        self.publishing = self.get_parameter("publishing").get_parameter_value().bool_value
-        self.turn_threshold = self.get_parameter("turn_threshold").get_parameter_value().double_value
-        self.hz = self.get_parameter("hz").get_parameter_value().double_value
-        
+        self.publishing = (
+            self.get_parameter("publishing").get_parameter_value().bool_value
+        )
+        self.turn_threshold = (
+            self.get_parameter("turn_threshold")
+            .get_parameter_value()
+            .double_value
+        )
+        self.hz = (
+            self.get_parameter("hz").get_parameter_value().double_value
+        )
+        self.centered_frames_required = (
+            self.get_parameter("centered_frames_required")
+            .get_parameter_value()
+            .integer_value
+        )
+
         # camera captured frames
         self.latest_frame = None
 
         # Publisher to send movement commands to movement_node
-        self.movement_publisher = self.create_publisher(String, "movement_command", 10)
+        self.movement_publisher = self.create_publisher(
+            String, "movement_command", 10
+        )
+        self.reframing_event_publisher = self.create_publisher(
+            String, "reframing_event", 10
+        )
 
         # tracking enabled flag
-        self.tracking_enabled = True
+        self.tracking_enabled = False
+        self.centered_frames = 0
 
         # Service server to enable/disable user tracking
         self.toggle_tracking_srv = self.create_service(
@@ -130,7 +152,9 @@ class CameraNode(Node):
                 self.objectTracker.inputTrackerFrame
             )
 
-        spatialDetectionNetwork.passthrough.link(self.objectTracker.inputDetectionFrame)
+        spatialDetectionNetwork.passthrough.link(
+            self.objectTracker.inputDetectionFrame
+        )
         spatialDetectionNetwork.out.link(self.objectTracker.inputDetections)
 
         # Start the pipeline (Assuming your specific DepthAI version uses pipeline.start())
@@ -150,7 +174,8 @@ class CameraNode(Node):
         if self.tracking_enabled:
             trackletsData = track.tracklets
 
-            move = STAY
+            move = None
+            person_centered = False
             for t in trackletsData:
                 roi = t.roi.denormalize(frame.shape[1], frame.shape[0])
                 x1, y1 = int(roi.topLeft().x), int(roi.topLeft().y)
@@ -183,9 +208,18 @@ class CameraNode(Node):
                         move = STEP_FORWARD_SMALL
                     elif height_ratio > 0.9:
                         move = STEP_BACKWARD_SMALL
+                    else:
+                        person_centered = True
                     break
 
-            self.send_move_request(move)
+            if person_centered:
+                self.centered_frames += 1
+                if self.centered_frames >= self.centered_frames_required:
+                    self.complete_reframing()
+            else:
+                self.centered_frames = 0
+                if move is not None:
+                    self.send_move_request(move)
 
         if self.publishing:
             # In-Memory JPEG Compression
@@ -207,6 +241,15 @@ class CameraNode(Node):
         msg.data = move_command
         self.movement_publisher.publish(msg)
 
+    def complete_reframing(self):
+        self.tracking_enabled = False
+        self.centered_frames = 0
+
+        msg = String()
+        msg.data = REFRAMING_COMPLETE
+        self.reframing_event_publisher.publish(msg)
+        self.get_logger().info("Reframing complete")
+
     def save_image_callback(self, request, response):
         if self.latest_frame is None:
             response.success = False
@@ -215,7 +258,11 @@ class CameraNode(Node):
 
         # Resolve the save path using request.filename and self.save_path
         filename = request.filename if request.filename else "camera_image.jpg"
-        save_path = str(Path(get_package_share_directory('photo_pupper')) / 'resource' / filename)
+        save_path = str(
+            Path(get_package_share_directory('photo_pupper'))
+            / 'resource'
+            / filename
+        )
         try:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             resized_frame = cv2.resize(self.latest_frame, (320, 240))
@@ -231,8 +278,10 @@ class CameraNode(Node):
 
     def toggle_tracking_callback(self, request, response):
         self.tracking_enabled = request.data
+        self.centered_frames = 0
         response.success = True
-        response.message = f"Tracking {'enabled' if self.tracking_enabled else 'disabled'}."
+        tracking_state = 'enabled' if self.tracking_enabled else 'disabled'
+        response.message = f"Tracking {tracking_state}."
         self.get_logger().info(response.message)
         return response
 

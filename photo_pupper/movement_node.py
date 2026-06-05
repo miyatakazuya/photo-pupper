@@ -50,7 +50,7 @@ MOVEMENT_SEQUENCES = {
     'look_left_slow': ['look_left_slow'],
     'look_right': ['look_right'],
     'look_right_slow': ['look_right_slow'],
-    GREETING_NOD: ['look_up_fast', 'look_down_slow', 'look_up_fast', 'look_down_slow', 'look_up_fast', 'look_down_slow', LOOK_MIDDLE],
+    GREETING_NOD: ['look_up_slow', 'look_down_slow', 'look_up_fast', 'look_down_slow', 'look_up_slow', 'look_down_slow', LOOK_MIDDLE],
     THINKING_MOTION: ['look_up_slow', 'pause_short', 'look_right', LOOK_MIDDLE],
     SPEAKING_MOTION: ['look_up_slow', 'look_down', 'look_right', LOOK_MIDDLE, 'look_up_fast', 'look_down_fast', LOOK_MIDDLE, 'look_up_fast', 'look_down_slow', 'look_up', LOOK_MIDDLE],
     SUCCESS_DANCE: [

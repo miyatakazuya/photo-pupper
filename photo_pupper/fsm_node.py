@@ -29,6 +29,7 @@ INPUT_CONFIRM = 'INPUT_CONFIRM'
 INPUT_NEXT = 'INPUT_NEXT'
 INPUT_PREVIOUS = 'INPUT_PREVIOUS'
 MOVEMENT_COMPLETE = 'MOVEMENT_COMPLETE'
+REFRAMING_COMPLETE = 'REFRAMING_COMPLETE'
 
 WALK_FORWARD = 'walk_forward'
 GREETING_NOD = 'greeting_nod'
@@ -40,7 +41,7 @@ STOP = 'stop'
 POSE_HOLD_SECONDS = 4.0
 THINKING_HOLD_SECONDS = 3.0
 REFRAME_TALK_SECONDS = 3.0
-REFRAMING_SECONDS = 6.0
+REFRAMING_TIMEOUT_SECONDS = 10.0
 COUNTDOWN_SECONDS = 1.0
 PHOTO_CAPTURE_SECONDS = 1.5
 OVERLAY_CONFIRM_SECONDS = 2.5
@@ -236,6 +237,12 @@ class PupperFSM(Node):
             self.movement_callback,
             10
         )
+        self.reframing_subscription = self.create_subscription(
+            String,
+            'reframing_event',
+            self.reframing_callback,
+            10
+        )
         self.photo_processing_client = self.create_client(
             ProcessPhoto,
             'process_photo'
@@ -307,6 +314,15 @@ class PupperFSM(Node):
         ):
             self.enter_idle()
 
+    def reframing_callback(self, msg):
+        if msg.data.strip() != REFRAMING_COMPLETE:
+            return
+
+        if self.state == FSMState.INITIAL_REFRAMING:
+            self.complete_initial_reframing()
+        elif self.state == FSMState.PHOTO_REFRAMING:
+            self.complete_photo_reframing()
+
     def handle_confirm(self):
         if self.state == FSMState.IDLE:
             self.enter_startup_effect()
@@ -355,7 +371,7 @@ class PupperFSM(Node):
     def enter_idle(self):
         self.clear_state_timer()
         self.state = FSMState.IDLE
-        self.set_tracking_enabled(True)
+        self.set_tracking_enabled(False)
         self.ready_yes_selected = True
         self.selected_mood_index = 0
         self.selected_pose_index = 0
@@ -375,9 +391,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.REVEAL
         self.show_screen('reveal')
-        # Keep camera reframing disabled during the reveal walk
-        self.set_tracking_enabled(False)
-        self.send_movement(WALK_FORWARD)
+        self.set_tracking_enabled(
+            False,
+            lambda: self.send_movement(WALK_FORWARD)
+        )
 
     def enter_startup_effect(self):
         self.clear_state_timer()
@@ -389,26 +406,20 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.INITIAL_CENTERING
         self.show_screen('reframing')
-        # disable camera reframing before this neutral pose
-        self.set_tracking_enabled(False)
-        self.send_movement(LOOK_MIDDLE)
+        self.set_tracking_enabled(
+            False,
+            lambda: self.send_movement(LOOK_MIDDLE)
+        )
 
     def enter_initial_reframing(self):
         self.clear_state_timer()
         self.state = FSMState.INITIAL_REFRAMING
         self.show_screen('reframing')
-        # enable reframing here and replace this timer with completion
-        self.set_tracking_enabled(True)
-        self.state_timer = self.create_timer(
-            REFRAMING_SECONDS,
-            self.complete_initial_reframing
-        )
+        self.set_tracking_enabled(True, self.start_reframing_timeout)
 
     def complete_initial_reframing(self):
         self.clear_state_timer()
-        # disable reframing before the greeting movement begins
-        self.set_tracking_enabled(False)
-        self.enter_welcome()
+        self.set_tracking_enabled(False, self.enter_welcome)
 
     def enter_welcome(self):
         self.clear_state_timer()
@@ -550,38 +561,30 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CENTERING
         self.show_screen('reframing')
-        # disable camera reframing before this
-        self.set_tracking_enabled(False)
-        self.send_movement(LOOK_MIDDLE)
+        self.set_tracking_enabled(
+            False,
+            lambda: self.send_movement(LOOK_MIDDLE)
+        )
 
     def enter_photo_reframing(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_REFRAMING
         self.show_screen('reframing')
-        # enable reframing here and replace this timer with when reframing is done
-        self.set_tracking_enabled(True)
-        self.state_timer = self.create_timer(
-            REFRAMING_SECONDS,
-            self.complete_photo_reframing
-        )
+        self.set_tracking_enabled(True, self.start_reframing_timeout)
 
     def complete_photo_reframing(self):
         self.clear_state_timer()
-        # disable reframing, then switch the LCD to the camera view
-        self.set_tracking_enabled(False)
-        self.enter_camera_ready()
+        self.set_tracking_enabled(False, self.enter_camera_ready)
 
     def enter_camera_ready(self):
         self.clear_state_timer()
         self.state = FSMState.CAMERA_READY
-        self.show_screen('camera_ready')
-        # keep the live camera view active in this state
+        self.show_screen('camera_live_start')
         self.say_clip('camera_ready')
 
     def enter_countdown_intro(self):
         self.clear_state_timer()
         self.state = FSMState.COUNTDOWN_INTRO
-        self.show_screen('countdown_intro')
         self.say_clip(
             'countdown_intro',
             self.enter_countdown
@@ -591,13 +594,10 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.COUNTDOWN
         self.countdown_number = 3
-        self.show_screen('camera_ready')
-        # Later this can overlay numbers on the DepthAI camera view.
         self.show_countdown_step()
 
     def show_countdown_step(self):
         self.say(str(self.countdown_number))
-        self.show_screen(f'countdown_{self.countdown_number}')
         self.state_timer = self.create_timer(
             COUNTDOWN_SECONDS,
             self.advance_countdown
@@ -615,6 +615,7 @@ class PupperFSM(Node):
     def enter_photo_capture(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CAPTURE
+        self.show_screen('camera_live_stop')
         self.show_screen('photo_capture')  # screen flash
         self.play_effect('PhotoCapture.wav')
 
@@ -665,7 +666,7 @@ class PupperFSM(Node):
 
     def enter_photo_reaction(self):
         self.clear_state_timer()
-        self.set_tracking_enabled(True)
+        self.set_tracking_enabled(False)
         self.state = FSMState.PHOTO_REACTION
         self.show_screen('photo_reaction')
         self.say_clip(
@@ -1103,26 +1104,74 @@ class PupperFSM(Node):
             self.destroy_timer(self.state_timer)
             self.state_timer = None
 
-    def set_tracking_enabled(self, enable):
+    def start_reframing_timeout(self):
+        if self.state not in (
+            FSMState.INITIAL_REFRAMING,
+            FSMState.PHOTO_REFRAMING
+        ):
+            return
+
+        self.clear_state_timer()
+        self.state_timer = self.create_timer(
+            REFRAMING_TIMEOUT_SECONDS,
+            self.handle_reframing_timeout
+        )
+
+    def handle_reframing_timeout(self):
+        self.get_logger().warn(
+            'Reframing timed out, continuing with the current framing'
+        )
+
+        if self.state == FSMState.INITIAL_REFRAMING:
+            self.complete_initial_reframing()
+        elif self.state == FSMState.PHOTO_REFRAMING:
+            self.complete_photo_reframing()
+
+    def set_tracking_enabled(self, enable, next_callback=None):
+        expected_state = self.state
+
         if not self.toggle_tracking_client.service_is_ready():
             self.toggle_tracking_client.wait_for_service(timeout_sec=0.5)
 
         if not self.toggle_tracking_client.service_is_ready():
             self.get_logger().warn('toggle_tracking service not ready')
+            if next_callback is not None:
+                next_callback()
             return
 
         request = SetBool.Request()
         request.data = enable
         future = self.toggle_tracking_client.call_async(request)
-        future.add_done_callback(self.handle_toggle_tracking_response)
+        future.add_done_callback(
+            lambda done_future: self.handle_toggle_tracking_response(
+                done_future,
+                expected_state,
+                next_callback
+            )
+        )
         self.get_logger().info(f"Requesting tracking toggle to {enable}...")
 
-    def handle_toggle_tracking_response(self, future):
+    def handle_toggle_tracking_response(
+        self,
+        future,
+        expected_state,
+        next_callback
+    ):
+        if self.state != expected_state:
+            return
+
         try:
             response = future.result()
-            self.get_logger().info(f"Toggle tracking response: {response.message}")
         except Exception as error:
             self.get_logger().error(f"Toggle tracking call failed: {error}")
+            return
+
+        self.get_logger().info(
+            f"Toggle tracking response: {response.message}"
+        )
+
+        if response.success and next_callback is not None:
+            next_callback()
 
 
 def main(args=None):

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
 import os
+import tempfile
+from io import BytesIO
 from pathlib import Path
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
+from PIL import Image
 from rclpy.node import Node
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 
 try:
@@ -157,10 +161,20 @@ class ScreenSubscriber(Node):
         self.animation_timer = None
         self.animation_frames = []
         self.animation_index = 0
+        self.live_camera_active = False
+        self.live_camera_path = (
+            Path(tempfile.gettempdir()) / 'photo_pupper_live_camera.jpg'
+        )
         self.subscription = self.create_subscription(
             String,
             'screen_command',
             self.screen_callback,
+            10
+        )
+        self.camera_subscription = self.create_subscription(
+            CompressedImage,
+            '/camera/compressed',
+            self.camera_callback,
             10
         )
         self.show_screen('idle')
@@ -168,7 +182,32 @@ class ScreenSubscriber(Node):
     def screen_callback(self, msg):
         self.show_screen(msg.data.strip())
 
+    def camera_callback(self, msg):
+        if not self.live_camera_active:
+            return
+
+        try:
+            with Image.open(BytesIO(bytes(msg.data))) as image:
+                frame = image.convert('RGB').resize((320, 240))
+                frame.save(self.live_camera_path, 'JPEG')
+            self.display.show_image(str(self.live_camera_path))
+        except Exception as error:
+            self.get_logger().warn(f'Could not display camera frame: {error}')
+
     def show_screen(self, screen_name):
+        if screen_name == 'camera_live_start':
+            self.stop_animation()
+            self.live_camera_active = True
+            self.get_logger().info('Showing live camera')
+            return
+
+        if screen_name == 'camera_live_stop':
+            self.live_camera_active = False
+            self.get_logger().info('Stopping live camera')
+            return
+
+        self.live_camera_active = False
+
         if screen_name.startswith('/'):
             self.stop_animation()
             if os.path.exists(screen_name):
