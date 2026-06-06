@@ -30,6 +30,7 @@ install(PROGRAMS
   photo_pupper/screen_node.py
   photo_pupper/touch_node.py
   photo_pupper/speaker_node.py
+  photo_pupper/keyboard_input_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
