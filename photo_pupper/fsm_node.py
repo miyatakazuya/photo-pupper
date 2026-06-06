@@ -118,8 +118,8 @@ AUDIO_LINES = {
         'choose Yes. If not, choose No.'
     ),
     'sensor_instructions': (
-        'Use button L or R to switch options, '
-        'and press A to confirm.'
+        'Use the scroll buttons to switch options, '
+        'and press the triangle button to confirm.'
     ),
     'ready_confirmed': (
         "Alright, sounds like you're ready. "
@@ -127,26 +127,26 @@ AUDIO_LINES = {
     ),
     'mood_instructions': (
         'Pick the mood you want for your photo. '
-        'Use button L or R to cycle through the options, '
-        'and press A to confirm.'
+        'Use the scroll buttons to cycle through the options, '
+        'and press the triangle button to confirm.'
     ),
     'camera_ready': (
         'Looking good. Get in view and hold that pose. '
-        'Press A to confirm when you are ready for the countdown.'
+        'Press the triangle button when you are ready for the countdown.'
     ),
     'countdown_intro': 'Get ready for the countdown!',
     'photo_reaction': 'That was a great shot. You make this look easy.',
     'preview_continue': (
-        'Your photo came out great. Press A to confirm.'
+        'Your photo came out great. Press the triangle button to continue.'
     ),
     'review_prompt': 'Would you like to keep that photo or retake it?',
     'toggle_instructions': (
-        'Use button L or R to toggle, and press A to confirm.'
+        'Use the scroll buttons to toggle, and press the triangle button to confirm.'
     ),
     'overlay_instructions': (
         'Great choice. Overlay selection comes next. '
-        'Use button L or R to choose which overlay theme you want, '
-        'and press A to confirm.'
+        'Use the scroll buttons to choose which overlay theme you want, '
+        'and press the triangle button to confirm.'
     ),
     'apply_overlay': 'Applying your chosen decorations now.',
     'final_preview': 'Your final picture came out amazing.',
