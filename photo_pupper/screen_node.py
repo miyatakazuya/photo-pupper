@@ -102,8 +102,8 @@ SCREEN_ANIMATIONS = {
         'Blink_Camera.jpg',
         'Default_Camera.jpg',
         'Happy_Camera.jpg',
-        'Blink_Camera.jpg',
         'Happy_Camera.jpg',
+        'Blink_Camera.jpg',
         'Default_Camera.jpg',
     ],
     'ready_talking': [
@@ -138,17 +138,14 @@ SCREEN_ANIMATIONS = {
         'Blink_Camera.jpg',
         'Default_Camera.jpg',
         'Happy_Camera.jpg',
-        'Blink_Camera.jpg',
         'Happy_Camera.jpg',
+        'Blink_Camera.jpg',
         'Default_Camera.jpg',
     ],
     'overlay_processing': [
         'Default_Camera.jpg',
         'Blink_Camera.jpg',
         'Default_Camera.jpg',
-        'Happy_Camera.jpg',
-        'Blink_Camera.jpg',
-        'Happy_Camera.jpg',
         'Default_Camera.jpg',
     ],
     'printing_talking': [
@@ -156,8 +153,8 @@ SCREEN_ANIMATIONS = {
         'Blink_Camera.jpg',
         'Default_Camera.jpg',
         'Happy_Camera.jpg',
-        'Blink_Camera.jpg',
         'Happy_Camera.jpg',
+        'Blink_Camera.jpg',
         'Default_Camera.jpg',
     ],
     'printing': [
@@ -171,8 +168,8 @@ SCREEN_ANIMATIONS = {
         'Blink_Camera.jpg',
         'Default_Camera.jpg',
         'Happy_Camera.jpg',
-        'Blink_Camera.jpg',
         'Happy_Camera.jpg',
+        'Blink_Camera.jpg',
         'Default_Camera.jpg',
     ],
 }

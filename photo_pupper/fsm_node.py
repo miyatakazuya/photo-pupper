@@ -452,6 +452,7 @@ class PupperFSM(Node):
         if self.ready_yes_selected:
             self.enter_ready_confirmed_talk()
         else:
+            # [AUDIO] add session_cancelled.wav
             self.say('No problem. Resetting.')
             self.enter_idle()
 
@@ -486,6 +487,7 @@ class PupperFSM(Node):
         self.state = FSMState.MOOD_CONFIRMATION
         self.mood_confirm_yes_selected = True
         self.show_mood_confirmation_screen()
+        # [AUDIO] add mood confirmation clips so one for each maybe
         self.say(f'You chose {self.current_mood()}. Is that right?')
 
     def confirm_mood_selection(self):
@@ -548,6 +550,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.CAMERA_REFRAME_TALK
         self.show_screen('reframing')
+        # [AUDIO] add camera_reframe.wav
         # Replace this timer when the new speech line has completion feedback
         self.say(
             'Hold that pose while I line you up for the camera.'
@@ -597,6 +600,7 @@ class PupperFSM(Node):
         self.show_countdown_step()
 
     def show_countdown_step(self):
+        # [AUDIO] add countdown_3.wav countdown_2.wav and countdown_1.wav
         self.say(str(self.countdown_number))
         self.show_screen(f'camera_countdown_{self.countdown_number}')
         self.state_timer = self.create_timer(
@@ -703,6 +707,7 @@ class PupperFSM(Node):
         if self.keep_photo_selected:
             self.enter_overlay_intro()
         else:
+            # [AUDIO] add photo_retake.wav
             self.say("No problem, let's try again.")
             self.enter_camera_reframe_talk()
 
@@ -720,6 +725,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PREPARE_OVERLAYS
         self.show_screen('overlay_processing')
+        # [AUDIO] play apply_overlay.wav here, like Applying your chosen decorations now
         self.overlay_preview_paths = {}
         self.pending_overlay_names = list(
             OVERLAYS_BY_MOOD[self.current_mood()]
@@ -796,6 +802,7 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.OVERLAY_CONFIRM_TALK
         self.show_overlay_screen()
+        # [AUDIO] add one generic overlay_confirm.wav, like you chose this overlay. Is that right?
         self.say(f'You chose {self.current_overlay_label()}. Is that right?')
         self.state_timer = self.create_timer(
             OVERLAY_CONFIRM_SECONDS,
@@ -823,6 +830,7 @@ class PupperFSM(Node):
 
             self.enter_final_preview()
         else:
+            # [AUDIO] add overlay_rechoose.wav
             self.say("No problem, let's choose again.")
             self.enter_overlay_selection()
 
@@ -857,6 +865,7 @@ class PupperFSM(Node):
         if self.final_keep_selected:
             self.enter_print_intro_talk()
         else:
+            # [AUDIO] add final_retake.wav
             self.say("No problem, let's try the photo again.")
             self.enter_camera_reframe_talk()
 
