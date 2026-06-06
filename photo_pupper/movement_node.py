@@ -139,8 +139,8 @@ class MovementNode(Node):
         self.primitive_moves = {
             "walk_forward_long": {
                 "kind": "velocity",
-                "duration": 3.0,
-                "linear_x": self.linear_speed,
+                "duration": 7.0,
+                "linear_x": 0.15,
                 "linear_y": 0.0,
                 "angular_z": 0.0,
             },
