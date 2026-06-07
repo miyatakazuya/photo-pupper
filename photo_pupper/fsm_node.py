@@ -215,6 +215,16 @@ class PupperFSM(Node):
     def __init__(self):
         super().__init__('pupper_fsm')
 
+        self.declare_parameter('enable_movement', True)
+        self.enable_movement = (
+            self.get_parameter('enable_movement')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.get_logger().info(
+            f'FSM Node initialized. enable_movement: {self.enable_movement}'
+        )
+
         self.screen_publisher = self.create_publisher(
             String,
             'screen_command',
@@ -391,10 +401,14 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.REVEAL
         self.show_screen('reveal')
-        self.set_tracking_enabled(
-            False,
-            lambda: self.send_movement(WALK_FORWARD)
-        )
+        if self.enable_movement:
+            self.set_tracking_enabled(
+                False,
+                lambda: self.send_movement(WALK_FORWARD)
+            )
+        else:
+            self.get_logger().info('Movement disabled, skipping WALK_FORWARD reveal')
+            self.enter_initial_centering()
 
     def enter_startup_effect(self):
         self.clear_state_timer()
@@ -406,16 +420,24 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.INITIAL_CENTERING
         self.show_screen('reframing')
-        self.set_tracking_enabled(
-            False,
-            lambda: self.send_movement(LOOK_MIDDLE)
-        )
+        if self.enable_movement:
+            self.set_tracking_enabled(
+                False,
+                lambda: self.send_movement(LOOK_MIDDLE)
+            )
+        else:
+            self.get_logger().info('Movement disabled, skipping LOOK_MIDDLE initial centering')
+            self.enter_initial_reframing()
 
     def enter_initial_reframing(self):
         self.clear_state_timer()
         self.state = FSMState.INITIAL_REFRAMING
         self.show_screen('reframing')
-        self.set_tracking_enabled(True, self.start_reframing_timeout)
+        if self.enable_movement:
+            self.set_tracking_enabled(True, self.start_reframing_timeout)
+        else:
+            self.get_logger().info('Movement disabled, skipping initial reframing')
+            self.complete_initial_reframing()
 
     def complete_initial_reframing(self):
         self.clear_state_timer()
@@ -564,16 +586,24 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_CENTERING
         self.show_screen('reframing')
-        self.set_tracking_enabled(
-            False,
-            lambda: self.send_movement(LOOK_MIDDLE)
-        )
+        if self.enable_movement:
+            self.set_tracking_enabled(
+                False,
+                lambda: self.send_movement(LOOK_MIDDLE)
+            )
+        else:
+            self.get_logger().info('Movement disabled, skipping LOOK_MIDDLE photo centering')
+            self.enter_photo_reframing()
 
     def enter_photo_reframing(self):
         self.clear_state_timer()
         self.state = FSMState.PHOTO_REFRAMING
         self.show_screen('reframing')
-        self.set_tracking_enabled(True, self.start_reframing_timeout)
+        if self.enable_movement:
+            self.set_tracking_enabled(True, self.start_reframing_timeout)
+        else:
+            self.get_logger().info('Movement disabled, skipping photo reframing')
+            self.complete_photo_reframing()
 
     def complete_photo_reframing(self):
         self.clear_state_timer()
@@ -942,7 +972,11 @@ class PupperFSM(Node):
         self.clear_state_timer()
         self.state = FSMState.GOODBYE_DANCE
         self.show_screen('done')
-        self.send_movement(SUCCESS_DANCE)
+        if self.enable_movement:
+            self.send_movement(SUCCESS_DANCE)
+        else:
+            self.get_logger().info('Movement disabled, skipping goodbye dance')
+            self.enter_idle()
 
     def enter_error_reset(self, message):
         self.clear_state_timer()
@@ -1068,7 +1102,7 @@ class PupperFSM(Node):
     def say_clip(self, clip_name, next_callback=None, movement_command=None):
         self.say(AUDIO_LINES.get(clip_name, clip_name))
 
-        if movement_command is not None:
+        if movement_command is not None and self.enable_movement:
             self.send_movement(movement_command)
 
         expected_state = self.state
@@ -1076,14 +1110,14 @@ class PupperFSM(Node):
         sound_started = self.play_sound(
             str(sound_file),
             next_callback,
-            movement_command,
+            movement_command if self.enable_movement else None,
             expected_state
         )
 
         if sound_started:
             return
 
-        if movement_command is not None:
+        if movement_command is not None and self.enable_movement:
             self.send_movement(STOP)
 
         if next_callback is not None:

@@ -1,6 +1,9 @@
 # Toggle Nodes (1 is activated)
 photobooth_nodes:
-  fsm_node: 1
+  fsm_node:
+    enabled: 1
+    parameters:
+      enable_movement: true
   gamepad_node: 1
   movement_node:
     enabled: 1

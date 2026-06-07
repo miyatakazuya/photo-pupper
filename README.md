@@ -45,6 +45,12 @@ source ~/ros2_ws/install/setup.bash
 ros2 launch photo_pupper photobooth_launch.py
 ```
 
+Terminal 3: Bluetoothctl
+```
+bluetoothctl
+connect 8C:41:F2:6B:1C:DC
+```
+
 ### Configuration
 ```yaml
 # Toggle Nodes (1 is activated)
