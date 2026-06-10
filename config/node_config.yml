@@ -3,13 +3,13 @@ photobooth_nodes:
   fsm_node:
     enabled: 1
     parameters:
-      enable_movement: false
+      enable_movement: true
   gamepad_node: 1
   movement_node:
-    enabled: 0
+    enabled: 1
     parameters:
-      real_movement: false
-      enable_logging: false
+      real_movement: true
+      enable_logging: true
       linear_speed: 0.07
       side_speed: 0.06
       turn_speed: 0.4
