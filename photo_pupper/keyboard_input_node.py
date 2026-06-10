@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
-"""Keyboard input utility node.
-
-Publishes to 'input_event' using arrow keys and spacebar,
-mimicking the gamepad controller when one is not available.
-
-Controls:
-    Space       → INPUT_CONFIRM
-    Right arrow → INPUT_NEXT
-    Left arrow  → INPUT_PREVIOUS
-    q / Ctrl+C  → Quit
-"""
+# *************************************************
+# * Filename: keyboard_input_node.py
+# * Student: Kazuya Miyata, kamiyata@ucsd.edu
+# *
+# * Description: ROS2 utility node that publishes input events using
+# *              keyboard arrow keys and spacebar, mimicking the
+# *              gamepad controller for desktop testing.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run photo_pupper keyboard_input_node
+# *
+# * Controls:
+# *     Space       -> INPUT_CONFIRM
+# *     Right arrow -> INPUT_NEXT
+# *     Left arrow  -> INPUT_PREVIOUS
+# *     q / Ctrl+C  -> Quit
+# *************************************************
 
 import sys
 import termios
@@ -34,6 +41,12 @@ class KeyboardInputNode(Node):
             'Space=confirm, Right=next, Left=previous, q=quit'
         )
 
+    # *************************************************
+    # * Name: publish_input(self, event)
+    # * Purpose: Publishes an input event string to the input_event topic.
+    # * @input event, string input event to publish.
+    # * @return None.
+    # *************************************************
     def publish_input(self, event):
         msg = String()
         msg.data = event
@@ -41,6 +54,13 @@ class KeyboardInputNode(Node):
         self.get_logger().info(f'Published input event: {event}')
 
 
+# *************************************************
+# * Name: read_key(fd)
+# * Purpose: Reads a single keypress from stdin, handling escape
+# *          sequences for arrow keys.
+# * @input fd, file descriptor for stdin.
+# * @return string key name or character, or None for unrecognized.
+# *************************************************
 def read_key(fd):
     """Read a single keypress, handling escape sequences for arrow keys."""
     ch = sys.stdin.read(1)
@@ -54,6 +74,12 @@ def read_key(fd):
     return ch
 
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and runs the keyboard input loop.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
     node = KeyboardInputNode()

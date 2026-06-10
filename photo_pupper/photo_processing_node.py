@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+# *************************************************
+# * Filename: photo_processing_node.py
+# * Student: Kazuya Miyata, kamiyata@ucsd.edu
+# *
+# * Description: ROS2 node that provides a ProcessPhoto service for
+# *              applying overlay frames to captured images using PIL.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run photo_pupper photo_processing_node
+# *************************************************
 import os
 import tempfile
 import rclpy
@@ -25,6 +36,13 @@ OVERLAY_FILES = {
 }
 
 
+# *************************************************
+# * Name: crop_to_aspect(image, target_aspect)
+# * Purpose: Center-crops an image to match a target aspect ratio.
+# * @input image, PIL Image to crop.
+# * @input target_aspect, float target width/height ratio.
+# * @return PIL Image, cropped to the target aspect ratio.
+# *************************************************
 def crop_to_aspect(image, target_aspect):
     width, height = image.size
     current_aspect = width / height
@@ -47,6 +65,14 @@ class PhotoProcessingNode(Node):
         self.srv = self.create_service(ProcessPhoto, 'process_photo', self.process_photo_callback)
         self.get_logger().info("Photo Processing Node initialized")
 
+    # *************************************************
+    # * Name: process_photo_callback(self, request, response)
+    # * Purpose: Service callback that loads an image, applies the
+    # *          requested overlay, and saves the result as JPEG.
+    # * @input request, ProcessPhoto.Request with input_path, overlay_type, output_path.
+    # * @input response, ProcessPhoto.Response to populate.
+    # * @return response, ProcessPhoto.Response with success, message, processed_path.
+    # *************************************************
     def process_photo_callback(self, request, response):
         input_path = request.input_path
         overlay_type = request.overlay_type
@@ -124,6 +150,12 @@ class PhotoProcessingNode(Node):
 
         return response
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and spins the photo processor.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
     node = PhotoProcessingNode()

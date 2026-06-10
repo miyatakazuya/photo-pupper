@@ -5,12 +5,13 @@
 # * Student: Austin Choi, akc006@ucsd.edu
 # * Student: Kazuya Miyata, kamiyata@ucsd.edu
 # *
-# * Description: Finite state machine node for pupper robot movement
-# *              and display update based on user input.
+# * Description: Finite state machine node that orchestrates the photo booth
+# *              session, coordinating screen, movement, camera, sound,
+# *              photo processing, and printer services.
 # *
 # * How to use:
 # * Usage:
-# *     ros2 run lab2task5 fsm_node
+# *     ros2 run photo_pupper fsm_node
 # *************************************************
 
 import random
@@ -293,6 +294,13 @@ class PupperFSM(Node):
         self.state_timer = None
         self.enter_idle()
 
+    # *************************************************
+    # * Name: input_callback(self, msg)
+    # * Purpose: Handles incoming input events (confirm, next, previous)
+    # *          and routes them to the appropriate FSM handler.
+    # * @input msg, String message containing the input event.
+    # * @return None.
+    # *************************************************
     def input_callback(self, msg):
         input_event = msg.data.strip()
 
@@ -303,6 +311,13 @@ class PupperFSM(Node):
         elif input_event == INPUT_PREVIOUS:
             self.handle_selection_change(-1)
 
+    # *************************************************
+    # * Name: movement_callback(self, msg)
+    # * Purpose: Handles movement completion events and advances the
+    # *          FSM through movement-dependent state transitions.
+    # * @input msg, String message containing the movement event.
+    # * @return None.
+    # *************************************************
     def movement_callback(self, msg):
         movement_event = msg.data.strip()
 
@@ -324,6 +339,13 @@ class PupperFSM(Node):
         ):
             self.enter_idle()
 
+    # *************************************************
+    # * Name: reframing_callback(self, msg)
+    # * Purpose: Handles reframing complete events from the camera node
+    # *          and completes the corresponding reframing state.
+    # * @input msg, String message containing the reframing event.
+    # * @return None.
+    # *************************************************
     def reframing_callback(self, msg):
         if msg.data.strip() != REFRAMING_COMPLETE:
             return
@@ -333,6 +355,13 @@ class PupperFSM(Node):
         elif self.state == FSMState.PHOTO_REFRAMING:
             self.complete_photo_reframing()
 
+    # *************************************************
+    # * Name: handle_confirm(self)
+    # * Purpose: Routes confirm button presses to the correct action
+    # *          based on the current FSM state.
+    # * @input None.
+    # * @return None.
+    # *************************************************
     def handle_confirm(self):
         if self.state == FSMState.IDLE:
             self.enter_startup_effect()
@@ -355,6 +384,13 @@ class PupperFSM(Node):
         elif self.state == FSMState.FINAL_CONFIRMATION:
             self.confirm_final_choice()
 
+    # *************************************************
+    # * Name: handle_selection_change(self, direction)
+    # * Purpose: Routes scroll button presses to toggle or cycle the
+    # *          active selection in the current FSM state.
+    # * @input direction, integer +1 for next or -1 for previous.
+    # * @return None.
+    # *************************************************
     def handle_selection_change(self, direction):
         if self.state == FSMState.READY:
             self.ready_yes_selected = not self.ready_yes_selected
@@ -1058,6 +1094,16 @@ class PupperFSM(Node):
         self.movement_publisher.publish(msg)
         self.get_logger().info(f'Movement command: {movement_command}')
 
+    # *************************************************
+    # * Name: play_sound(self, sound_path, next_callback, movement_command, expected_state)
+    # * Purpose: Calls the PlaySound service asynchronously and optionally
+    # *          chains a callback and movement stop on completion.
+    # * @input sound_path, string path to the WAV file.
+    # * @input next_callback, optional callable to invoke after playback.
+    # * @input movement_command, optional movement to stop after playback.
+    # * @input expected_state, FSMState to validate before callback.
+    # * @return bool, True if the sound service call was initiated.
+    # *************************************************
     def play_sound(self, sound_path, next_callback=None,
                    movement_command=None, expected_state=None):
         if not self.play_sound_client.wait_for_service(timeout_sec=1.0):
@@ -1099,6 +1145,15 @@ class PupperFSM(Node):
         if not sound_started and next_callback is not None:
             next_callback()
 
+    # *************************************************
+    # * Name: say_clip(self, clip_name, next_callback, movement_command)
+    # * Purpose: Plays a pre-recorded audio clip by name, optionally
+    # *          triggering a movement and chaining a callback.
+    # * @input clip_name, string key into AUDIO_LINES and WAV filename.
+    # * @input next_callback, optional callable to invoke after playback.
+    # * @input movement_command, optional movement to run during playback.
+    # * @return None.
+    # *************************************************
     def say_clip(self, clip_name, next_callback=None, movement_command=None):
         self.say(AUDIO_LINES.get(clip_name, clip_name))
 
@@ -1218,6 +1273,12 @@ class PupperFSM(Node):
             next_callback()
 
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and spins the FSM.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
 

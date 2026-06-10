@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 # *************************************************
 # * Filename: touch_node.py
-# * Student: Kane Li, kal036@ucsd.edu
-# * Student: Austin Choi, akc006@ucsd.edu
-# * Student: Kazuya Miyata, kamiyata@ucsd.edu
-# * 
-# * Description: Mini Pupper touch pannel test script.
+# * Description: ROS2 node that reads GPIO touch panel inputs on the
+# *              Mini Pupper and publishes input events for the FSM.
 # *
 # * Code Citation: Original code provided by MangDang (Copyright 2023)
 # *
 # * How to use:
 # * Usage:
-# *     ros2 run lab2task5 touch_node
+# *     ros2 run photo_pupper touch_node
 # *************************************************
 #
 # Copyright 2023 MangDang

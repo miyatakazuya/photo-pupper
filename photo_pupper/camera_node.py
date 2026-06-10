@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# *************************************************
+# * Filename: camera_node.py
+# * Student: Kane Li, kal036@ucsd.edu
+# *
+# * Description: ROS2 node that manages the OAK-D camera pipeline for
+# *              person tracking, image capture, and compressed frame
+# *              publishing using DepthAI spatial detection.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run photo_pupper camera_node
+# *************************************************
 
 import cv2
 import depthai as dai
@@ -89,6 +101,13 @@ class CameraNode(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.get_logger().info(f"Node spinning. Targeting {1.0 / timer_period} FPS.")
 
+    # *************************************************
+    # * Name: setup_depthai_pipeline(self)
+    # * Purpose: Builds and starts the DepthAI pipeline with RGB camera,
+    # *          stereo depth, spatial detection, and object tracking.
+    # * @input None.
+    # * @return None.
+    # *************************************************
     def setup_depthai_pipeline(self):
         """Builds and starts the pipeline, storing hardware queues."""
         fullFrameTracking = False
@@ -160,6 +179,13 @@ class CameraNode(Node):
         # Start the pipeline (Assuming your specific DepthAI version uses pipeline.start())
         self.pipeline.start()
 
+    # *************************************************
+    # * Name: timer_callback(self)
+    # * Purpose: Periodic callback that pulls camera frames, runs person
+    # *          tracking logic, and optionally publishes compressed images.
+    # * @input None.
+    # * @return None.
+    # *************************************************
     def timer_callback(self):
         # Non-blocking pull from hardware. If nothing is there, return immediately.
         imgFrame = self.preview_queue.tryGet()
@@ -236,11 +262,24 @@ class CameraNode(Node):
 
                 self.publisher_.publish(msg)
 
+    # *************************************************
+    # * Name: send_move_request(self, move_command)
+    # * Purpose: Publishes a movement command string to the movement node.
+    # * @input move_command, string movement command to publish.
+    # * @return None.
+    # *************************************************
     def send_move_request(self, move_command):
         msg = String()
         msg.data = move_command
         self.movement_publisher.publish(msg)
 
+    # *************************************************
+    # * Name: complete_reframing(self)
+    # * Purpose: Disables tracking and publishes a reframing complete event
+    # *          once the person is centered in the frame.
+    # * @input None.
+    # * @return None.
+    # *************************************************
     def complete_reframing(self):
         self.tracking_enabled = False
         self.centered_frames = 0
@@ -250,6 +289,14 @@ class CameraNode(Node):
         self.reframing_event_publisher.publish(msg)
         self.get_logger().info("Reframing complete")
 
+    # *************************************************
+    # * Name: save_image_callback(self, request, response)
+    # * Purpose: Service callback that saves the latest camera frame to
+    # *          disk as a JPEG file.
+    # * @input request, SaveImage.Request with optional filename.
+    # * @input response, SaveImage.Response to populate.
+    # * @return response, SaveImage.Response with success and message.
+    # *************************************************
     def save_image_callback(self, request, response):
         if self.latest_frame is None:
             response.success = False
@@ -276,6 +323,13 @@ class CameraNode(Node):
             self.get_logger().error(response.message)
         return response
 
+    # *************************************************
+    # * Name: toggle_tracking_callback(self, request, response)
+    # * Purpose: Service callback that enables or disables person tracking.
+    # * @input request, SetBool.Request with data field.
+    # * @input response, SetBool.Response to populate.
+    # * @return response, SetBool.Response with success and message.
+    # *************************************************
     def toggle_tracking_callback(self, request, response):
         self.tracking_enabled = request.data
         self.centered_frames = 0
@@ -286,6 +340,12 @@ class CameraNode(Node):
         return response
 
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and spins the camera service.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
     node = CameraNode()

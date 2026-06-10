@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# *************************************************
+# * Filename: screen_node.py
+# * Student: Austin Choi, akc006@ucsd.edu
+# *
+# * Description: ROS2 node that drives the Mini Pupper LCD display,
+# *              showing static screens, frame animations, live camera
+# *              feed, and countdown overlays.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run photo_pupper screen_node
+# *************************************************
 
 import os
 import tempfile
@@ -211,9 +223,23 @@ class ScreenSubscriber(Node):
         )
         self.show_screen('idle')
 
+    # *************************************************
+    # * Name: screen_callback(self, msg)
+    # * Purpose: Subscription callback that receives screen command strings
+    # *          and routes them to show_screen.
+    # * @input msg, String message with the screen command name.
+    # * @return None.
+    # *************************************************
     def screen_callback(self, msg):
         self.show_screen(msg.data.strip())
 
+    # *************************************************
+    # * Name: camera_callback(self, msg)
+    # * Purpose: Receives compressed camera frames and displays them on
+    # *          the LCD with optional countdown overlay when live view is active.
+    # * @input msg, CompressedImage message with JPEG data.
+    # * @return None.
+    # *************************************************
     def camera_callback(self, msg):
         if not self.live_camera_active:
             return
@@ -233,6 +259,13 @@ class ScreenSubscriber(Node):
         except Exception as error:
             self.get_logger().warn(f'Could not display camera frame: {error}')
 
+    # *************************************************
+    # * Name: show_screen(self, screen_name)
+    # * Purpose: Resolves a screen name to a static image, animation, live
+    # *          camera mode, or file path and displays it.
+    # * @input screen_name, string screen identifier or absolute image path.
+    # * @return None.
+    # *************************************************
     def show_screen(self, screen_name):
         if screen_name == 'camera_live_start':
             self.stop_animation()
@@ -279,6 +312,13 @@ class ScreenSubscriber(Node):
         self.show_image(image_name)
         self.get_logger().info(f'Showing screen: {screen_name}')
 
+    # *************************************************
+    # * Name: start_animation(self, screen_name)
+    # * Purpose: Starts a looping frame animation on the display using
+    # *          the frame list defined in SCREEN_ANIMATIONS.
+    # * @input screen_name, string key into SCREEN_ANIMATIONS.
+    # * @return None.
+    # *************************************************
     def start_animation(self, screen_name):
         self.stop_animation()
         self.animation_frames = SCREEN_ANIMATIONS[screen_name]
@@ -308,6 +348,12 @@ class ScreenSubscriber(Node):
         self.display.show_image(str(image_path))
 
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and spins the screen subscriber.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
 

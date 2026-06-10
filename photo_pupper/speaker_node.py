@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+# *************************************************
+# * Filename: speaker_node.py
+# * Student: Kazuya Miyata, kamiyata@ucsd.edu
+# *
+# * Description: ROS2 node that provides a PlaySound service for audio
+# *              playback through a USB speaker using sounddevice.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run photo_pupper speaker_node
+# *************************************************
 import sounddevice as sd
 import soundfile as sf
 import time
@@ -27,6 +38,14 @@ class SpeakerNode(Node):
         self.srv = self.create_service(PlaySound, 'play_sound', self.play_sound_callback)
         self.get_logger().info(f"Speaker Node loaded (volume: {self.volume}%)")
 
+    # *************************************************
+    # * Name: play_sound_callback(self, request, response)
+    # * Purpose: Service callback that plays a WAV file at the configured
+    # *          volume when given a valid file path.
+    # * @input request, PlaySound.Request with sound_path field.
+    # * @input response, PlaySound.Response to populate.
+    # * @return response, PlaySound.Response with success and message.
+    # *************************************************
     def play_sound_callback(self, request, response):
         target_path = request.sound_path
 
@@ -57,6 +76,12 @@ class SpeakerNode(Node):
 
         return response
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and spins the speaker service.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
     node = SpeakerNode()

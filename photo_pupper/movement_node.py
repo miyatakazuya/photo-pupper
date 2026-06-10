@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# *************************************************
+# * Filename: movement_node.py
+# * Student: Austin Choi, akc006@ucsd.edu
+# *
+# * Description: ROS2 node that executes movement command sequences
+# *              by publishing velocity and body pose messages to
+# *              control the Mini Pupper robot.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 run photo_pupper movement_node
+# *************************************************
 
 import math
 
@@ -83,6 +95,14 @@ MOVEMENT_SEQUENCES = {
 }
 
 
+# *************************************************
+# * Name: quaternion_from_euler(roll, pitch, yaw)
+# * Purpose: Converts Euler angles (roll, pitch, yaw) to a quaternion.
+# * @input roll, float roll angle in radians.
+# * @input pitch, float pitch angle in radians.
+# * @input yaw, float yaw angle in radians.
+# * @return tuple (x, y, z, w) quaternion components.
+# *************************************************
 def quaternion_from_euler(roll, pitch, yaw):
     cr = math.cos(roll * 0.5)
     sr = math.sin(roll * 0.5)
@@ -318,6 +338,13 @@ class MovementNode(Node):
         self.motion_timer = None
         self.get_logger().info(f"real_movement={self.real_movement}")
 
+    # *************************************************
+    # * Name: command_callback(self, msg)
+    # * Purpose: Receives a movement command string, parses it, builds
+    # *          the primitive sequence, and starts execution.
+    # * @input msg, String message with the movement command.
+    # * @return None.
+    # *************************************************
     def command_callback(self, msg):
         command, duration_override = self.parse_command(msg.data.strip())
 
@@ -333,6 +360,13 @@ class MovementNode(Node):
 
         self.start_sequence(command, sequence)
 
+    # *************************************************
+    # * Name: parse_command(self, raw_command)
+    # * Purpose: Splits a raw command string into the command name and
+    # *          an optional duration override (format: "command:seconds").
+    # * @input raw_command, string raw command possibly with duration.
+    # * @return tuple (command, duration_override) where duration may be None.
+    # *************************************************
     def parse_command(self, raw_command):
         if ":" not in raw_command:
             return raw_command, None
@@ -351,6 +385,14 @@ class MovementNode(Node):
 
         return command, duration
 
+    # *************************************************
+    # * Name: build_sequence(self, command, duration_override)
+    # * Purpose: Looks up a command in MOVEMENT_SEQUENCES and builds a
+    # *          list of primitive move dictionaries to execute.
+    # * @input command, string movement command name.
+    # * @input duration_override, optional float duration in seconds.
+    # * @return list of primitive dicts, or None if command is unknown.
+    # *************************************************
     def build_sequence(self, command, duration_override):
         if command not in MOVEMENT_SEQUENCES:
             return None
@@ -373,6 +415,14 @@ class MovementNode(Node):
 
         return sequence
 
+    # *************************************************
+    # * Name: start_sequence(self, command, sequence)
+    # * Purpose: Stops any active motion and begins executing a new
+    # *          movement sequence from the first primitive.
+    # * @input command, string name of the movement command.
+    # * @input sequence, list of primitive move dictionaries.
+    # * @return None.
+    # *************************************************
     def start_sequence(self, command, sequence):
         if (
             self.active_primitive is not None
@@ -403,6 +453,13 @@ class MovementNode(Node):
             primitive["duration"], self.finish_primitive
         )
 
+    # *************************************************
+    # * Name: execute_primitive(self, primitive)
+    # * Purpose: Publishes a single velocity, pose, or pause primitive
+    # *          to the appropriate ROS topic.
+    # * @input primitive, dict describing the movement primitive.
+    # * @return None.
+    # *************************************************
     def execute_primitive(self, primitive):
         name = primitive["name"]
         duration = primitive["duration"]
@@ -518,6 +575,12 @@ class MovementNode(Node):
         self.pose_publisher.publish(pose)
 
 
+# *************************************************
+# * Name: main(args=None)
+# * Purpose: Initializes the ROS2 node and spins the movement controller.
+# * @input args, command line arguments.
+# * @return None.
+# *************************************************
 def main(args=None):
     rclpy.init(args=args)
 

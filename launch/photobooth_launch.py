@@ -1,3 +1,15 @@
+# *************************************************
+# * Filename: photobooth_launch.py
+# * Student: Kazuya Miyata, kamiyata@ucsd.edu
+# *
+# * Description: ROS2 launch file that reads node_config.yml and
+# *              launches the configured photo booth nodes with
+# *              their parameters.
+# *
+# * How to use:
+# * Usage:
+# *     ros2 launch photo_pupper photobooth_launch.py
+# *************************************************
 import os
 import yaml
 from ament_index_python.packages import get_package_share_directory
@@ -5,6 +17,13 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
+# *************************************************
+# * Name: generate_launch_description()
+# * Purpose: Reads node configuration from YAML and builds a
+# *          LaunchDescription with the enabled nodes.
+# * @input None.
+# * @return LaunchDescription with configured node actions.
+# *************************************************
 def generate_launch_description():
     pkg_share = get_package_share_directory("photo_pupper")
     node_config_path = os.path.join(pkg_share, "config", "node_config.yml")
