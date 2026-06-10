@@ -71,8 +71,9 @@ class CameraNode(Node):
         )
 
         # tracking enabled flag
-        self.tracking_enabled = False
+        self.tracking_enabled = True
         self.centered_frames = 0
+        self.color = (0, 255, 0)  # Green bounding box (BGR)
 
         # Service server to enable/disable user tracking
         self.toggle_tracking_srv = self.create_service(
