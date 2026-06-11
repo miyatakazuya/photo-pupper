@@ -1,0 +1,4 @@
+string sound_path       # Absolute path to the sound file on disk
+---
+bool success            # True if the sound played successfully
+string message          # Status details or debugging error logs

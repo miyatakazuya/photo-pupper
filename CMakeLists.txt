@@ -12,6 +12,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/PrintImage.srv"
   "srv/ProcessPhoto.srv"
+  "srv/PlaySound.srv"
+  "srv/SaveImage.srv"
 )
 
 install(DIRECTORY photo_pupper
@@ -19,13 +21,16 @@ install(DIRECTORY photo_pupper
 )
 
 install(PROGRAMS
+  photo_pupper/camera_node.py
   photo_pupper/fsm_node.py
+  photo_pupper/gamepad_node.py
   photo_pupper/movement_node.py
-  photo_pupper/people_detection_node.py
   photo_pupper/photo_processing_node.py
   photo_pupper/printer_node.py
   photo_pupper/screen_node.py
   photo_pupper/touch_node.py
+  photo_pupper/speaker_node.py
+  photo_pupper/keyboard_input_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

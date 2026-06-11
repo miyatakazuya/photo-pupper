@@ -31,12 +31,15 @@ setup(
     entry_points={
         'console_scripts': [
             'fsm_node = photo_pupper.fsm_node:main',
+            'gamepad_node = photo_pupper.gamepad_node:main',
             'movement_node = photo_pupper.movement_node:main',
             'people_detection_node = photo_pupper.people_detection_node:main',
             'photo_processing_node = photo_pupper.photo_processing_node:main',
             'printer_node = photo_pupper.printer_node:main',
             'screen_node = photo_pupper.screen_node:main',
+            'speaker_node = photo_pupper.speaker_node:main',
             'touch_node = photo_pupper.touch_node:main',
+            'camera_node = photo_pupper.camera_node:main'
         ],
     },
 )

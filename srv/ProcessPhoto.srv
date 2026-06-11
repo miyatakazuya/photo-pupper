@@ -5,6 +5,17 @@ uint8 overlay_type         # Enum choice for the frame overlay
 # Overlay Type Enum Constants
 uint8 OVERLAY_NONE = 0
 uint8 OVERLAY_FLOWERS = 1
+uint8 OVERLAY_STARS = 2
+uint8 OVERLAY_PARTY = 3
+uint8 OVERLAY_COMIC = 4
+uint8 OVERLAY_CLOUDS = 5
+uint8 OVERLAY_CONFETTI = 6
+uint8 OVERLAY_SAD_CLOUD = 7
+uint8 OVERLAY_RAIN = 8
+uint8 OVERLAY_BROKEN_HEART = 9
+uint8 OVERLAY_BLACK_WHITE = 10
+uint8 OVERLAY_CAUTION = 11
+uint8 OVERLAY_LOCKED_IN = 12
 
 string output_path         # Optional: Specific path to save the output (generates one if empty)
 ---
